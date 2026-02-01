@@ -3,6 +3,8 @@ import cors from 'cors';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler } from './middleware/errorHandler';
 import healthRoutes from './routes/health.routes';
+import tasksRoutes from './routes/tasks.routes';
+import preferencesRoutes from './routes/preferences.routes';
 
 const app = express();
 
@@ -13,6 +15,8 @@ app.use(requestLogger);
 
 // Routes
 app.use('/health', healthRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/preferences', preferencesRoutes);
 
 // Error Handling
 app.use(errorHandler);
