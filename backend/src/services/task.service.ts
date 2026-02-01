@@ -7,10 +7,11 @@ export class TaskService {
     return this.tasks;
   }
 
-  public createTask(taskData: Omit<Task, 'id'>): Task {
+  public createTask(taskData: Omit<Task, 'id' | 'status'>): Task {
     const newTask: Task = {
       id: Date.now().toString(),
       ...taskData,
+      status: 'Pending',
     };
     this.tasks.push(newTask);
     return newTask;
