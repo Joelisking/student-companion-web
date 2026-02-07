@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,25 +21,62 @@ const preferencesSchema = z.object({
 
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
+interface PreferencesResponse {
+  id?: string;
+  preferredTime: string;
+  sessionLength: number;
+  breakLength: number;
+  weekendPreference: string;
+}
+
+const defaultFormValues: PreferencesFormData = {
+  preferredTime: 'Morning',
+  sessionLength: 45,
+  breakLength: 10,
+  weekendPreference: 'Light',
+};
+
 export default function StudyPreferencesForm() {
-  const [status, setStatus] = useState<
-    'idle' | 'submitting' | 'success' | 'error'
-  >('idle');
+  const [loadState, setLoadState] = useState<'loading' | 'loaded' | 'empty' | 'error'>('loading');
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [submissionMessage, setSubmissionMessage] = useState('');
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<PreferencesFormData>({
     resolver: zodResolver(preferencesSchema),
-    defaultValues: {
-      preferredTime: 'Morning',
-      sessionLength: 45,
-      breakLength: 10,
-      weekendPreference: 'Light',
-    },
+    defaultValues: defaultFormValues,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await fetchAPI<PreferencesResponse>('/api/preferences');
+        if (cancelled) return;
+        reset({
+          preferredTime: data.preferredTime as PreferencesFormData['preferredTime'],
+          sessionLength: data.sessionLength,
+          breakLength: data.breakLength,
+          weekendPreference: data.weekendPreference as PreferencesFormData['weekendPreference'],
+        });
+        setLoadState(data.id ? 'loaded' : 'empty');
+        setLoadError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setLoadError(err instanceof Error ? err.message : 'Failed to load preferences');
+        setLoadState('error');
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [reset]);
 
   const onSubmit = async (data: PreferencesFormData) => {
     setStatus('submitting');
@@ -52,23 +89,59 @@ export default function StudyPreferencesForm() {
       });
       setStatus('success');
       setSubmissionMessage('Preferences saved successfully!');
+      setLoadState('loaded');
     } catch (err) {
       const errorMessage =
-        err instanceof Error
-          ? err.message
-          : 'Failed to save preferences';
+        err instanceof Error ? err.message : 'Failed to save preferences';
       setStatus('error');
-      setSubmissionMessage(
-        errorMessage + ' (Backend not yet implemented)'
-      );
+      setSubmissionMessage(errorMessage);
     }
   };
+
+  if (loadState === 'loading') {
+    return (
+      <div className="w-full max-w-md p-6 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700">
+        <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
+          Study Preferences
+        </h2>
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-700 rounded" />
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-700 rounded" />
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-700 rounded" />
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-700 rounded" />
+        </div>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-4">Loading preferences...</p>
+      </div>
+    );
+  }
+
+  if (loadState === 'error') {
+    return (
+      <div className="w-full max-w-md p-6 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700">
+        <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
+          Study Preferences
+        </h2>
+        <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-sm">
+          {loadError}
+        </div>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-3">
+          You can try refreshing the page. If the problem continues, check your connection or sign in.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md p-6 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700">
       <h2 className="text-xl font-bold mb-4 text-zinc-900 dark:text-zinc-100">
         Study Preferences
       </h2>
+
+      {loadState === 'empty' && (
+        <div className="mb-4 p-3 bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-400 rounded text-sm">
+          No preferences saved yet. Set your preferences below and save.
+        </div>
+      )}
 
       {status === 'success' && (
         <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-sm">

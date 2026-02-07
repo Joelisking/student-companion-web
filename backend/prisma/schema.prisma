@@ -49,11 +49,12 @@ enum WeekendPreference {
 // ─── Models ─────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(uuid())
-  email     String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tasks     Task[]
+  id                 String            @id @default(uuid())
+  email              String?           @unique
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  tasks              Task[]
+  studyPreferences   StudyPreference[]
 
   @@map("users")
 }
@@ -82,6 +83,7 @@ model Task {
 
 model StudyPreference {
   id                String             @id @default(uuid())
+  userId            String
   preferredTime     PreferredStudyTime @default(Morning)
   sessionLength     Int
   breakLength       Int
@@ -89,5 +91,9 @@ model StudyPreference {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([userId])
   @@map("study_preferences")
 }
