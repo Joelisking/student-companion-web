@@ -1,40 +1,49 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from '../middleware/auth';
 import * as taskService from '../services/task.service';
 
 export class TaskController {
-  public getTasks = async (req: Request, res: Response, next: NextFunction) => {
+  public getTasks = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const tasks = await taskService.getAllTasks();
+      const userId = req.userId!;
+      const tasks = await taskService.getAllTasks(userId);
       res.json(tasks);
     } catch (err) {
       next(err);
     }
   };
 
-  public getTask = async (req: Request, res: Response, next: NextFunction) => {
+  public getTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
+      const userId = req.userId!;
       const task = await taskService.getTaskById(id as string);
       if (!task) {
-        res.status(404).json({ error: 'Task not found' });
+        res.status(404).json({ message: 'Task not found' });
         return;
       }
-      res.json(task);
+      if (task.userId !== userId) {
+        res.status(403).json({ message: 'Forbidden' });
+        return;
+      }
+      const { userId: _u, ...taskResponse } = task;
+      res.json(taskResponse);
     } catch (err) {
       next(err);
     }
   };
 
-  public createTask = async (req: Request, res: Response, next: NextFunction) => {
+  public createTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+      const userId = req.userId!;
       const { title, course, dueDate, priority, complexity, notes } = req.body;
 
       if (!title || !course || !dueDate) {
-        res.status(400).json({ error: 'Missing required fields' });
+        res.status(400).json({ message: 'Missing required fields: title, course, dueDate' });
         return;
       }
 
-      const newTask = await taskService.createTask({
+      const newTask = await taskService.createTask(userId, {
         title,
         course,
         dueDate,
@@ -49,29 +58,52 @@ export class TaskController {
     }
   };
 
-  public updateTask = async (req: Request, res: Response, next: NextFunction) => {
+  public updateTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const updatedTask = await taskService.updateTask(id as string, req.body);
+      const userId = req.userId!;
+      const body = req.body as Record<string, unknown>;
+      if (body.title !== undefined && (typeof body.title !== 'string' || !body.title.trim())) {
+        res.status(400).json({ message: 'title must be a non-empty string' });
+        return;
+      }
+      if (body.course !== undefined && (typeof body.course !== 'string' || !body.course.trim())) {
+        res.status(400).json({ message: 'course must be a non-empty string' });
+        return;
+      }
+      if (body.dueDate !== undefined && (typeof body.dueDate !== 'string' || !body.dueDate.trim())) {
+        res.status(400).json({ message: 'dueDate must be a non-empty string' });
+        return;
+      }
+      const result = await taskService.updateTask(id as string, userId, body);
 
-      if (!updatedTask) {
-        res.status(404).json({ error: 'Task not found' });
+      if (result === null) {
+        res.status(404).json({ message: 'Task not found' });
+        return;
+      }
+      if ('forbidden' in result && result.forbidden) {
+        res.status(403).json({ message: 'Forbidden' });
         return;
       }
 
-      res.json(updatedTask);
+      res.status(200).json(result);
     } catch (err) {
       next(err);
     }
   };
 
-  public deleteTask = async (req: Request, res: Response, next: NextFunction) => {
+  public deleteTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      const success = await taskService.deleteTask(id as string);
+      const userId = req.userId!;
+      const result = await taskService.deleteTask(id as string, userId);
 
-      if (!success) {
-        res.status(404).json({ error: 'Task not found' });
+      if (result === null) {
+        res.status(404).json({ message: 'Task not found' });
+        return;
+      }
+      if (typeof result === 'object' && 'forbidden' in result) {
+        res.status(403).json({ message: 'Forbidden' });
         return;
       }
 
