@@ -3,6 +3,7 @@ import cors from 'cors';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler } from './middleware/errorHandler';
 import healthRoutes from './routes/health.routes';
+import authRoutes from './routes/auth.routes';
 import tasksRoutes from './routes/tasks.routes';
 import preferencesRoutes from './routes/preferences.routes';
 
@@ -13,8 +14,9 @@ app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
 
-// Routes
+// Routes (auth login is public; tasks and preferences require auth)
 app.use('/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/preferences', preferencesRoutes);
 

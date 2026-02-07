@@ -1,23 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import TaskForm from './TaskForm';
 import TaskList from './TaskList';
 import StudyPreferencesForm from './StudyPreferencesForm';
 
-function ensureUserId(): void {
-  if (typeof window === 'undefined') return;
-  if (localStorage.getItem('userId')) return;
-  const id = crypto.randomUUID();
-  localStorage.setItem('userId', id);
-}
-
 export default function TasksSection() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  useEffect(() => {
-    ensureUserId();
-  }, []);
 
   return (
     <>
