@@ -1,12 +1,11 @@
+const API_BASE =
+  typeof window !== 'undefined'
+    ? (process.env.NEXT_PUBLIC_API_URL || '')
+    : process.env.NEXT_PUBLIC_API_URL || '';
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-
-const getAuthUserId = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('userId');
-  }
-  return process.env.NEXT_PUBLIC_DEV_USER_ID ?? null;
-};
+  API_BASE || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+const USE_PROXY = !process.env.NEXT_PUBLIC_API_URL;
+const PREFIX = USE_PROXY ? '/api/backend' : '';
 
 interface RequestOptions extends RequestInit {
   headers?: Record<string, string>;
@@ -17,19 +16,17 @@ export const fetchAPI = async <T>(
   options: RequestOptions = {}
 ): Promise<T> => {
   const { headers, ...rest } = options;
-  const userId = getAuthUserId();
+  const url = `${API_URL}${PREFIX}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     ...headers,
   };
-  if (userId) {
-    defaultHeaders['X-User-Id'] = userId;
-  }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(url, {
     headers: defaultHeaders,
     ...rest,
+    credentials: 'include',
   });
 
   if (!response.ok) {

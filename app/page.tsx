@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import HealthCheck from '../components/HealthCheck';
 import TasksSection from '../components/TasksSection';
+import AuthGuard from '../components/AuthGuard';
 
 export default function Home() {
   return (
@@ -8,7 +9,9 @@ export default function Home() {
       <main className="flex min-h-screen w-full max-w-5xl flex-col items-center justify-between py-12 px-8 bg-white dark:bg-black sm:items-center">
         <div className="w-full mb-8 space-y-8 flex flex-col items-center">
           <HealthCheck />
-          <TasksSection />
+          <AuthGuard>
+            <TasksSection />
+          </AuthGuard>
         </div>
         <Image
           className="dark:invert"
