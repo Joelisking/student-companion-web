@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
+import { validatePreferencesBody } from '../lib/validatePreferences';
 import * as preferenceService from '../services/preference.service';
 
 export class PreferenceController {
@@ -16,38 +17,28 @@ export class PreferenceController {
   public savePreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId!;
-      const { preferredTime, sessionLength, breakLength, weekendPreference } = req.body;
-
-      if (
-        preferredTime == null ||
-        sessionLength == null ||
-        breakLength == null ||
-        weekendPreference == null
-      ) {
-        res.status(400).json({ message: 'Missing required fields' });
+      const validation = validatePreferencesBody(req.body);
+      if (!validation.ok) {
+        res.status(400).json({ message: validation.message });
         return;
       }
-
-      const saved = await preferenceService.savePreferencesForUser(userId, {
-        preferredTime,
-        sessionLength,
-        breakLength,
-        weekendPreference,
-      });
+      const saved = await preferenceService.savePreferencesForUser(userId, validation.data);
       res.status(201).json(saved);
     } catch (err) {
       next(err);
     }
   };
 
+  /** PUT: creates or updates preferences for authenticated user; returns 200 with updated preferences */
   public updatePreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId!;
-      const updated = await preferenceService.updatePreferencesForUser(userId, req.body);
-      if (!updated) {
-        res.status(404).json({ message: 'Preferences not found' });
+      const validation = validatePreferencesBody(req.body);
+      if (!validation.ok) {
+        res.status(400).json({ message: validation.message });
         return;
       }
+      const updated = await preferenceService.savePreferencesForUser(userId, validation.data);
       res.status(200).json(updated);
     } catch (err) {
       next(err);

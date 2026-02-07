@@ -82,13 +82,16 @@ export default function StudyPreferencesForm() {
     setStatus('submitting');
     setSubmissionMessage('');
 
+    const isEdit = loadState === 'loaded';
     try {
       await fetchAPI('/api/preferences', {
-        method: 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         body: JSON.stringify(data),
       });
       setStatus('success');
-      setSubmissionMessage('Preferences saved successfully!');
+      setSubmissionMessage(
+        isEdit ? 'Preferences updated successfully!' : 'Preferences saved successfully!'
+      );
       setLoadState('loaded');
     } catch (err) {
       const errorMessage =
@@ -162,12 +165,15 @@ export default function StudyPreferencesForm() {
           </label>
           <select
             {...register('preferredTime')}
-            className="w-full p-2 border rounded dark:bg-zinc-900 dark:border-zinc-700 dark:text-white">
+            className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.preferredTime ? 'border-red-500' : 'dark:border-zinc-700'}`}>
             <option value="Morning">Morning</option>
             <option value="Afternoon">Afternoon</option>
             <option value="Evening">Evening</option>
             <option value="Night">Night</option>
           </select>
+          {errors.preferredTime && (
+            <p className="text-red-500 text-xs mt-1">{errors.preferredTime.message}</p>
+          )}
         </div>
 
         <div>
@@ -208,11 +214,14 @@ export default function StudyPreferencesForm() {
           </label>
           <select
             {...register('weekendPreference')}
-            className="w-full p-2 border rounded dark:bg-zinc-900 dark:border-zinc-700 dark:text-white">
+            className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.weekendPreference ? 'border-red-500' : 'dark:border-zinc-700'}`}>
             <option value="Heavy">Heavy (Catch-up)</option>
             <option value="Light">Light (Maintenance)</option>
             <option value="Free">Free (No study)</option>
           </select>
+          {errors.weekendPreference && (
+            <p className="text-red-500 text-xs mt-1">{errors.weekendPreference.message}</p>
+          )}
         </div>
 
         <button
