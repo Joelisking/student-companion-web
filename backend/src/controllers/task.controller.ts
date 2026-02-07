@@ -3,7 +3,11 @@ import { AuthRequest } from '../middleware/auth';
 import * as taskService from '../services/task.service';
 
 export class TaskController {
-  public getTasks = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  public getTasks = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const userId = req.userId!;
       const tasks = await taskService.getAllTasks(userId);
@@ -13,33 +17,49 @@ export class TaskController {
     }
   };
 
-  public getTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  public getTask = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { id } = req.params;
       const userId = req.userId!;
-      const task = await taskService.getTaskById(id as string);
-      if (!task) {
+      const result = await taskService.getTask(userId, id as string);
+
+      if (!result) {
         res.status(404).json({ message: 'Task not found' });
         return;
       }
-      if (task.userId !== userId) {
+
+      if ('forbidden' in result) {
         res.status(403).json({ message: 'Forbidden' });
         return;
       }
-      const { userId: _u, ...taskResponse } = task;
-      res.json(taskResponse);
+
+      res.json(result);
     } catch (err) {
       next(err);
     }
   };
 
-  public createTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  public createTask = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const userId = req.userId!;
-      const { title, course, dueDate, priority, complexity, notes } = req.body;
+      const { title, course, dueDate, priority, complexity, notes } =
+        req.body;
 
       if (!title || !course || !dueDate) {
-        res.status(400).json({ message: 'Missing required fields: title, course, dueDate' });
+        res
+          .status(400)
+          .json({
+            message:
+              'Missing required fields: title, course, dueDate',
+          });
         return;
       }
 
@@ -58,24 +78,47 @@ export class TaskController {
     }
   };
 
-  public updateTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  public updateTask = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { id } = req.params;
       const userId = req.userId!;
       const body = req.body as Record<string, unknown>;
-      if (body.title !== undefined && (typeof body.title !== 'string' || !body.title.trim())) {
-        res.status(400).json({ message: 'title must be a non-empty string' });
+      if (
+        body.title !== undefined &&
+        (typeof body.title !== 'string' || !body.title.trim())
+      ) {
+        res
+          .status(400)
+          .json({ message: 'title must be a non-empty string' });
         return;
       }
-      if (body.course !== undefined && (typeof body.course !== 'string' || !body.course.trim())) {
-        res.status(400).json({ message: 'course must be a non-empty string' });
+      if (
+        body.course !== undefined &&
+        (typeof body.course !== 'string' || !body.course.trim())
+      ) {
+        res
+          .status(400)
+          .json({ message: 'course must be a non-empty string' });
         return;
       }
-      if (body.dueDate !== undefined && (typeof body.dueDate !== 'string' || !body.dueDate.trim())) {
-        res.status(400).json({ message: 'dueDate must be a non-empty string' });
+      if (
+        body.dueDate !== undefined &&
+        (typeof body.dueDate !== 'string' || !body.dueDate.trim())
+      ) {
+        res
+          .status(400)
+          .json({ message: 'dueDate must be a non-empty string' });
         return;
       }
-      const result = await taskService.updateTask(id as string, userId, body);
+      const result = await taskService.updateTask(
+        id as string,
+        userId,
+        body
+      );
 
       if (result === null) {
         res.status(404).json({ message: 'Task not found' });
@@ -92,11 +135,18 @@ export class TaskController {
     }
   };
 
-  public deleteTask = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  public deleteTask = async (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const { id } = req.params;
       const userId = req.userId!;
-      const result = await taskService.deleteTask(id as string, userId);
+      const result = await taskService.deleteTask(
+        id as string,
+        userId
+      );
 
       if (result === null) {
         res.status(404).json({ message: 'Task not found' });
