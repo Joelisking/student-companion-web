@@ -28,36 +28,55 @@ export interface SerializedTask {
   updatedAt: string;
 }
 
-function serializeTask(task: PrismaTask): SerializedTask {
+function serializeTask(task: PrismaTask & { userId?: string }): SerializedTask & { userId?: string } {
   return {
-    ...task,
-    status: statusToApi[task.status] ?? task.status,
+    id: task.id,
+    userId: task.userId,
+    title: task.title,
+    course: task.course,
     dueDate: task.dueDate.toISOString(),
+    priority: task.priority,
+    complexity: task.complexity,
+    status: statusToApi[task.status] ?? task.status,
+    notes: task.notes,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
 }
 
-export async function getAllTasks(): Promise<SerializedTask[]> {
-  const tasks = await prisma.task.findMany({ orderBy: { createdAt: 'desc' } });
-  return tasks.map(serializeTask);
+export async function getAllTasks(userId: string): Promise<SerializedTask[]> {
+  const tasks = await prisma.task.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+  return tasks.map((t) => {
+    const s = serializeTask(t);
+    const { userId: _u, ...rest } = s;
+    return rest as SerializedTask;
+  });
 }
 
-export async function getTaskById(id: string): Promise<SerializedTask | null> {
+export async function getTaskById(id: string): Promise<(SerializedTask & { userId: string }) | null> {
   const task = await prisma.task.findUnique({ where: { id } });
-  return task ? serializeTask(task) : null;
+  if (!task) return null;
+  const s = serializeTask(task);
+  return { ...s, userId: task.userId } as SerializedTask & { userId: string };
 }
 
-export async function createTask(data: {
-  title: string;
-  course: string;
-  dueDate: string;
-  priority?: string;
-  complexity?: string;
-  notes?: string;
-}): Promise<SerializedTask> {
+export async function createTask(
+  userId: string,
+  data: {
+    title: string;
+    course: string;
+    dueDate: string;
+    priority?: string;
+    complexity?: string;
+    notes?: string;
+  }
+): Promise<SerializedTask> {
   const task = await prisma.task.create({
     data: {
+      userId,
       title: data.title,
       course: data.course,
       dueDate: new Date(data.dueDate),
@@ -66,31 +85,37 @@ export async function createTask(data: {
       ...(data.notes !== undefined && { notes: data.notes }),
     },
   });
-  return serializeTask(task);
+  const s = serializeTask(task);
+  const { userId: _u, ...rest } = s;
+  return rest as SerializedTask;
 }
+
+export type UpdateTaskResult = SerializedTask | null | { forbidden: true };
 
 export async function updateTask(
   id: string,
-  updates: Record<string, unknown>,
-): Promise<SerializedTask | null> {
-  const data: Record<string, unknown> = { ...updates };
+  userId: string,
+  updates: Record<string, unknown>
+): Promise<UpdateTaskResult> {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return null;
+  if (task.userId !== userId) return { forbidden: true };
 
-  // Map status from API format to DB enum
+  const data: Record<string, unknown> = { ...updates };
   if (typeof data.status === 'string' && data.status in statusToDb) {
     data.status = statusToDb[data.status];
   }
-
-  // Convert dueDate string to Date
   if (typeof data.dueDate === 'string') {
     data.dueDate = new Date(data.dueDate as string);
   }
-
-  // Don't allow updating id
   delete data.id;
+  delete data.userId;
 
   try {
-    const task = await prisma.task.update({ where: { id }, data });
-    return serializeTask(task);
+    const updated = await prisma.task.update({ where: { id }, data });
+    const s = serializeTask(updated);
+    const { userId: _u, ...rest } = s;
+    return rest as SerializedTask;
   } catch (err: unknown) {
     if (
       typeof err === 'object' &&
@@ -104,7 +129,10 @@ export async function updateTask(
   }
 }
 
-export async function deleteTask(id: string): Promise<boolean> {
+export async function deleteTask(id: string, userId: string): Promise<null | true | { forbidden: true }> {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return null;
+  if (task.userId !== userId) return { forbidden: true };
   try {
     await prisma.task.delete({ where: { id } });
     return true;
@@ -115,7 +143,7 @@ export async function deleteTask(id: string): Promise<boolean> {
       'code' in err &&
       (err as { code: string }).code === 'P2025'
     ) {
-      return false;
+      return null;
     }
     throw err;
   }
