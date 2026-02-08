@@ -1,6 +1,12 @@
 import prisma from '../lib/prisma';
+import bcrypt from 'bcrypt';
 
-export async function findOrCreateUserByEmail(email: string): Promise<{ userId: string }> {
+const SALT_ROUNDS = 10;
+
+export async function findOrCreateUserByEmail(
+  email: string
+): Promise<{ userId: string }> {
+  // ... existing code ...
   const normalized = email.trim().toLowerCase();
   if (!normalized) {
     throw new Error('Email is required');
@@ -13,5 +19,31 @@ export async function findOrCreateUserByEmail(email: string): Promise<{ userId: 
       data: { email: normalized },
     });
   }
+  return { userId: user.id };
+}
+
+export async function register(
+  email: string,
+  password: string
+): Promise<{ userId: string }> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existingUser) {
+    throw new Error('Email already exists');
+  }
+
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+  const user = await prisma.user.create({
+    data: {
+      email: normalizedEmail,
+      password: hashedPassword,
+    },
+  });
+
   return { userId: user.id };
 }
