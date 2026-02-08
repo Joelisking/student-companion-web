@@ -8,17 +8,12 @@ export default function DashboardPage() {
   const [user, setUser] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
-    // Check for authentication
     const userId = localStorage.getItem('userId');
-    if (!userId) {
-      router.push('/login');
-    } else {
-      if (!user || user.id !== userId) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setUser({ id: userId });
-      }
+    if (userId && (!user || user.id !== userId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUser({ id: userId });
     }
-  }, [router, user]); // Added user to dependency for correctness of the check
+  }, [user]);
 
   const handleLogout = () => {
     // Clear session
