@@ -58,6 +58,7 @@ export async function getAllTasks(
   });
   return tasks.map((t) => {
     const s = serializeTask(t);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _u, ...rest } = s;
     return rest as SerializedTask;
   });
@@ -86,6 +87,7 @@ export async function getTask(
 
   if (task) {
     const s = serializeTask(task);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _u, ...rest } = s;
     return rest as SerializedTask;
   }
@@ -126,6 +128,7 @@ export async function createTask(
     },
   });
   const s = serializeTask(task);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { userId: _u, ...rest } = s;
   return rest as SerializedTask;
 }
@@ -165,6 +168,7 @@ export async function updateTask(
     // This should ideally never be null if updateMany succeeded
     if (updated) {
       const s = serializeTask(updated);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { userId: _u, ...rest } = s;
       return rest as SerializedTask;
     }

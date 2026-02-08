@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function SignupPage() {
+export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get('registered');
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,21 +21,9 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch(
-        'http://localhost:5001/api/auth/register',
+        'http://localhost:5001/api/auth/login',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -47,11 +37,14 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(data.message || 'Login failed');
       }
 
-      // Registration successful
-      router.push('/login?registered=true');
+      // Login successful
+      // Store token/userId if needed, for now just redirect
+      // In a real app, we'd use NextAuth or a context to store session
+      localStorage.setItem('userId', data.userId);
+      router.push('/dashboard');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -68,8 +61,13 @@ export default function SignupPage() {
       <div className="w-full max-w-md space-y-8 px-4">
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Sign up for an account
+            Sign in to your account
           </h2>
+          {registered && (
+            <div className="mt-2 text-center text-sm text-green-600">
+              Registration successful! Please log in.
+            </div>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="-space-y-px rounded-md shadow-sm">
@@ -99,33 +97,13 @@ export default function SignupPage() {
                 name="password"
                 type="password"
                 required
-                className="relative block w-full border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
+                className="relative block w-full rounded-b-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
                 placeholder="Password"
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     password: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Confirm Password
-              </label>
-              <input
-                id="confirm-password"
-                name="confirmPassword"
-                type="password"
-                required
-                className="relative block w-full rounded-b-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
-                placeholder="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    confirmPassword: e.target.value,
                   })
                 }
               />
@@ -143,14 +121,14 @@ export default function SignupPage() {
               type="submit"
               disabled={loading}
               className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50">
-              {loading ? 'Signing up...' : 'Sign up'}
+              {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
           <div className="text-sm text-center">
             <Link
-              href="/login"
+              href="/signup"
               className="font-medium text-indigo-600 hover:text-indigo-500">
-              Already have an account? Log in
+              Don&apos;t have an account? Sign up
             </Link>
           </div>
         </form>

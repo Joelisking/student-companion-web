@@ -47,3 +47,26 @@ export async function register(
 
   return { userId: user.id };
 }
+
+export async function login(
+  email: string,
+  password: string
+): Promise<{ userId: string } | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (!user || !user.password) {
+    return null;
+  }
+
+  const isValid = await bcrypt.compare(password, user.password);
+
+  if (!isValid) {
+    return null;
+  }
+
+  return { userId: user.id };
+}
