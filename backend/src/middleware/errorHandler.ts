@@ -7,8 +7,9 @@ export const errorHandler = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
 ) => {
-  console.error(err.stack);
-  const status = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
+  const error = err as { stack?: string; statusCode?: number; message?: string };
+  console.error(error.stack);
+  const status = error.statusCode || 500;
+  const message = error.message || 'Internal Server Error';
   res.status(status).json({ message });
 };
