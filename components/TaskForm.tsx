@@ -17,7 +17,11 @@ const taskSchema = z.object({
 
 type TaskFormData = z.infer<typeof taskSchema>;
 
-export default function TaskForm() {
+interface TaskFormProps {
+  onSuccess?: () => void;
+}
+
+export default function TaskForm({ onSuccess }: TaskFormProps) {
   const [status, setStatus] = useState<
     'idle' | 'submitting' | 'success' | 'error'
   >('idle');
@@ -45,13 +49,14 @@ export default function TaskForm() {
     setSubmissionMessage('');
 
     try {
-      await fetchAPI('/tasks', {
+      await fetchAPI('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       setStatus('success');
       setSubmissionMessage('Task created successfully!');
       reset();
+      onSuccess?.();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to create task';

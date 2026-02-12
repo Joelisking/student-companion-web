@@ -1,8 +1,7 @@
 import Image from 'next/image';
 import HealthCheck from '../components/HealthCheck';
-import TaskForm from '../components/TaskForm';
-import TaskList from '../components/TaskList';
-import StudyPreferencesForm from '../components/StudyPreferencesForm';
+import TasksSection from '../components/TasksSection';
+import AuthGuard from '../components/AuthGuard';
 
 export default function Home() {
   return (
@@ -10,12 +9,9 @@ export default function Home() {
       <main className="flex min-h-screen w-full max-w-5xl flex-col items-center justify-between py-12 px-8 bg-white dark:bg-black sm:items-center">
         <div className="w-full mb-8 space-y-8 flex flex-col items-center">
           <HealthCheck />
-          <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
-            <TaskForm />
-            <StudyPreferencesForm />
-          </div>
-          <div className="w-full h-px bg-zinc-200 dark:bg-zinc-800 my-8" />
-          <TaskList />
+          <AuthGuard>
+            <TasksSection />
+          </AuthGuard>
         </div>
         <Image
           className="dark:invert"

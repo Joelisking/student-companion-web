@@ -1,33 +1,206 @@
-import { Task } from '../models/task.model';
+import prisma from '../lib/prisma';
+import {
+  Task as PrismaTask,
+  TaskStatus,
+} from '../generated/prisma/client';
 
-export class TaskService {
-  private tasks: Task[] = [];
+// Map DB enum values to API-friendly values
+const statusToApi: Record<TaskStatus, string> = {
+  Pending: 'Pending',
+  InProgress: 'In Progress',
+  Completed: 'Completed',
+};
 
-  public getAllTasks(): Task[] {
-    return this.tasks;
+// Map API-friendly values to DB enum values
+const statusToDb: Record<string, TaskStatus> = {
+  Pending: 'Pending',
+  'In Progress': 'InProgress',
+  Completed: 'Completed',
+};
+
+export interface SerializedTask {
+  id: string;
+  title: string;
+  course: string;
+  dueDate: string;
+  priority: string;
+  complexity: string;
+  status: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function serializeTask(
+  task: PrismaTask & { userId?: string }
+): SerializedTask & { userId?: string } {
+  return {
+    id: task.id,
+    userId: task.userId,
+    title: task.title,
+    course: task.course,
+    dueDate: task.dueDate.toISOString(),
+    priority: task.priority,
+    complexity: task.complexity,
+    status: statusToApi[task.status] ?? task.status,
+    notes: task.notes,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+  };
+}
+
+export async function getAllTasks(
+  userId: string
+): Promise<SerializedTask[]> {
+  const tasks = await prisma.task.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+  return tasks.map((t) => {
+    const s = serializeTask(t);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _u, ...rest } = s;
+    return rest as SerializedTask;
+  });
+}
+
+// Internal use only - strictly for fallback checks
+export async function getTaskUnscoped(
+  id: string
+): Promise<(SerializedTask & { userId: string }) | null> {
+  const task = await prisma.task.findUnique({ where: { id } });
+  if (!task) return null;
+  const s = serializeTask(task);
+  return { ...s, userId: task.userId } as SerializedTask & {
+    userId: string;
+  };
+}
+
+export async function getTask(
+  userId: string,
+  id: string
+): Promise<SerializedTask | null | { forbidden: true }> {
+  // Primary: Scoped query
+  const task = await prisma.task.findFirst({
+    where: { id, userId },
+  });
+
+  if (task) {
+    const s = serializeTask(task);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _u, ...rest } = s;
+    return rest as SerializedTask;
   }
 
-  public createTask(taskData: Omit<Task, 'id' | 'status'>): Task {
-    const newTask: Task = {
-      id: Date.now().toString(),
-      ...taskData,
-      status: 'Pending',
-    };
-    this.tasks.push(newTask);
-    return newTask;
+  // Secondary: Check if exists for 403 vs 404
+  const exists = await prisma.task.findUnique({ where: { id } });
+  if (exists) {
+    return { forbidden: true };
   }
 
-  public updateTask(id: string, updates: Partial<Task>): Task | null {
-    const index = this.tasks.findIndex((t) => t.id === id);
-    if (index === -1) return null;
+  return null;
+}
 
-    this.tasks[index] = { ...this.tasks[index], ...updates };
-    return this.tasks[index];
+export async function createTask(
+  userId: string,
+  data: {
+    title: string;
+    course: string;
+    dueDate: string;
+    priority?: string;
+    complexity?: string;
+    notes?: string;
+  }
+): Promise<SerializedTask> {
+  const task = await prisma.task.create({
+    data: {
+      userId,
+      title: data.title,
+      course: data.course,
+      dueDate: new Date(data.dueDate),
+      ...(data.priority && {
+        priority: data.priority as PrismaTask['priority'],
+      }),
+      ...(data.complexity && {
+        complexity: data.complexity as PrismaTask['complexity'],
+      }),
+      ...(data.notes !== undefined && { notes: data.notes }),
+    },
+  });
+  const s = serializeTask(task);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { userId: _u, ...rest } = s;
+  return rest as SerializedTask;
+}
+
+export type UpdateTaskResult =
+  | SerializedTask
+  | null
+  | { forbidden: true };
+
+export async function updateTask(
+  id: string,
+  userId: string,
+  updates: Record<string, unknown>
+): Promise<UpdateTaskResult> {
+  const data: Record<string, unknown> = { ...updates };
+  if (typeof data.status === 'string' && data.status in statusToDb) {
+    data.status = statusToDb[data.status];
+  }
+  if (typeof data.dueDate === 'string') {
+    data.dueDate = new Date(data.dueDate as string);
+  }
+  delete data.id;
+  delete data.userId;
+
+  // Primary: Scoped update
+  // Since 'id' + 'userId' is not a unique constraint, we must use updateMany.
+  const result = await prisma.task.updateMany({
+    where: { id, userId },
+    data,
+  });
+
+  if (result.count > 0) {
+    // Fetch and return the updated task
+    const updated = await prisma.task.findFirst({
+      where: { id, userId },
+    });
+    // This should ideally never be null if updateMany succeeded
+    if (updated) {
+      const s = serializeTask(updated);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { userId: _u, ...rest } = s;
+      return rest as SerializedTask;
+    }
   }
 
-  public deleteTask(id: string): boolean {
-    const initialLength = this.tasks.length;
-    this.tasks = this.tasks.filter((t) => t.id !== id);
-    return this.tasks.length !== initialLength;
+  // Secondary: Check if exists for 403 vs 404
+  const exists = await prisma.task.findUnique({ where: { id } });
+  if (exists) {
+    return { forbidden: true };
   }
+
+  return null;
+}
+
+export async function deleteTask(
+  id: string,
+  userId: string
+): Promise<null | true | { forbidden: true }> {
+  // Primary: Scoped delete
+  const result = await prisma.task.deleteMany({
+    where: { id, userId },
+  });
+
+  if (result.count > 0) {
+    return true;
+  }
+
+  // Secondary: Check if exists for 403 vs 404
+  const exists = await prisma.task.findUnique({ where: { id } });
+  if (exists) {
+    return { forbidden: true };
+  }
+
+  return null;
 }

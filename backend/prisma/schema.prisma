@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum TaskPriority {
+  High
+  Medium
+  Low
+}
+
+enum TaskComplexity {
+  Simple
+  Moderate
+  Complex
+}
+
+enum TaskStatus {
+  Pending
+  InProgress
+  Completed
+}
+
+enum PreferredStudyTime {
+  Morning
+  Afternoon
+  Evening
+  Night
+}
+
+enum WeekendPreference {
+  Heavy
+  Light
+  Free
+}
+
+// ─── Models ─────────────────────────────────────────────
+
+model User {
+  id                 String            @id @default(uuid())
+  email              String?           @unique
+  password           String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  tasks              Task[]
+  studyPreferences   StudyPreference[]
+
+  @@map("users")
+}
+
+model Task {
+  id         String         @id @default(uuid())
+  userId     String
+  title      String
+  course     String
+  dueDate    DateTime
+  priority   TaskPriority   @default(Medium)
+  complexity TaskComplexity @default(Moderate)
+  status     TaskStatus     @default(Pending)
+  notes      String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dueDate])
+  @@index([status])
+  @@index([priority])
+  @@map("tasks")
+}
+
+model StudyPreference {
+  id                String             @id @default(uuid())
+  userId            String
+  preferredTime     PreferredStudyTime @default(Morning)
+  sessionLength     Int
+  breakLength       Int
+  weekendPreference WeekendPreference  @default(Light)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([userId])
+  @@map("study_preferences")
+}
