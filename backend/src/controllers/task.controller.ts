@@ -3,6 +3,11 @@ import { AuthRequest } from '../middleware/auth';
 import * as taskService from '../services/task.service';
 
 export class TaskController {
+  private static VALID_STATUSES = ['Pending', 'In Progress', 'Completed'];
+  private static VALID_PRIORITIES = ['High', 'Medium', 'Low'];
+  private static VALID_SORT_FIELDS = ['dueDate', 'priority', 'createdAt'];
+  private static VALID_ORDERS = ['asc', 'desc'];
+
   public getTasks = async (
     req: AuthRequest,
     res: Response,
@@ -10,7 +15,42 @@ export class TaskController {
   ) => {
     try {
       const userId = req.userId!;
-      const tasks = await taskService.getAllTasks(userId);
+      const { status, priority, sortBy, order } = req.query;
+
+      if (status && !TaskController.VALID_STATUSES.includes(status as string)) {
+        res.status(400).json({
+          message: `Invalid status. Must be one of: ${TaskController.VALID_STATUSES.join(', ')}`,
+        });
+        return;
+      }
+
+      if (priority && !TaskController.VALID_PRIORITIES.includes(priority as string)) {
+        res.status(400).json({
+          message: `Invalid priority. Must be one of: ${TaskController.VALID_PRIORITIES.join(', ')}`,
+        });
+        return;
+      }
+
+      if (sortBy && !TaskController.VALID_SORT_FIELDS.includes(sortBy as string)) {
+        res.status(400).json({
+          message: `Invalid sortBy. Must be one of: ${TaskController.VALID_SORT_FIELDS.join(', ')}`,
+        });
+        return;
+      }
+
+      if (order && !TaskController.VALID_ORDERS.includes(order as string)) {
+        res.status(400).json({
+          message: `Invalid order. Must be one of: ${TaskController.VALID_ORDERS.join(', ')}`,
+        });
+        return;
+      }
+
+      const tasks = await taskService.getAllTasks(userId, {
+        status: status as string | undefined,
+        priority: priority as string | undefined,
+        sortBy: sortBy as string | undefined,
+        order: order as 'asc' | 'desc' | undefined,
+      });
       res.json(tasks);
     } catch (err) {
       next(err);
