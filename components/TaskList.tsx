@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
+import { useSession } from 'next-auth/react';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -12,7 +13,7 @@ const taskSchema = z.object({
   dueDate: z.string().min(1, 'Due Date is required'),
   priority: z.enum(['High', 'Medium', 'Low']),
   complexity: z.enum(['Simple', 'Moderate', 'Complex']),
-  status: z.enum(['Pending', 'In Progress', 'Completed']),
+  status: z.enum(['Pending', 'InProgress', 'Completed']),
   notes: z.string().optional(),
 });
 
@@ -25,7 +26,7 @@ export interface Task {
   dueDate: string;
   priority: 'High' | 'Medium' | 'Low';
   complexity: 'Simple' | 'Moderate' | 'Complex';
-  status: 'Pending' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'InProgress' | 'Completed';
   notes?: string | null;
 }
 
@@ -34,39 +35,58 @@ interface TaskListProps {
   onTaskMutated?: () => void;
 }
 
-export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskListProps) {
+export default function TaskList({
+  refreshTrigger = 0,
+  onTaskMutated,
+}: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const clearFeedback = () => {
     const t = setTimeout(() => setFeedback(null), 4000);
     return () => clearTimeout(t);
   };
 
+  const { data: session } = useSession();
+
   const loadTasks = async () => {
+    if (!session?.user?.id) return;
     try {
-      const data = await fetchAPI<Task[]>('/api/tasks');
+      // Backend expects X-User-Id or Authorization header.
+      // Since we are proxying or calling directly, let's include X-User-Id from session.
+      const data = await fetchAPI<Task[]>('/api/tasks', {
+        headers: {
+          'X-User-Id': session.user.id,
+        },
+      });
       const sorted = (Array.isArray(data) ? data : []).sort(
-        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        (a, b) =>
+          new Date(a.dueDate).getTime() -
+          new Date(b.dueDate).getTime()
       );
       setTasks(sorted);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load tasks'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadTasks();
-    const interval = setInterval(loadTasks, 5000);
-    return () => clearInterval(interval);
-  }, [refreshTrigger]);
+    if (session?.user?.id) {
+      loadTasks();
+    }
+  }, [refreshTrigger, session?.user?.id]);
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -80,7 +100,10 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
     } catch (err) {
       setFeedback({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to delete task',
+        text:
+          err instanceof Error
+            ? err.message
+            : 'Failed to delete task',
       });
       clearFeedback();
     } finally {
@@ -182,11 +205,13 @@ function TaskCard({
             className={`px-2 py-0.5 rounded text-xs font-medium ${
               task.status === 'Completed'
                 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                : task.status === 'In Progress'
+                : task.status === 'InProgress'
                   ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
                   : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
             }`}>
-            {task.status}
+            {task.status === 'InProgress'
+              ? 'In Progress'
+              : task.status}
           </span>
         </div>
         <h3
@@ -194,7 +219,9 @@ function TaskCard({
           title={task.title}>
           {task.title}
         </h3>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">{task.course}</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">
+          {task.course}
+        </p>
         <div className="text-sm text-zinc-600 dark:text-zinc-300 mb-2">
           <p>Due: {new Date(task.dueDate).toLocaleString()}</p>
           <p>Complexity: {task.complexity}</p>
@@ -265,7 +292,8 @@ function EditTaskModal({
       });
       onSuccess();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to update task';
+      const msg =
+        err instanceof Error ? err.message : 'Failed to update task';
       setSubmitError(msg);
       onError(msg);
     }
@@ -289,16 +317,22 @@ function EditTaskModal({
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">Title *</label>
+              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">
+                Title *
+              </label>
               <input
                 {...register('title')}
                 type="text"
                 className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.title ? 'border-red-500' : 'dark:border-zinc-700'}`}
               />
               {errors.title && (
-                <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.title.message}
+                </p>
               )}
             </div>
 
@@ -312,7 +346,9 @@ function EditTaskModal({
                 className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.course ? 'border-red-500' : 'dark:border-zinc-700'}`}
               />
               {errors.course && (
-                <p className="text-red-500 text-xs mt-1">{errors.course.message}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.course.message}
+                </p>
               )}
             </div>
 
@@ -326,7 +362,9 @@ function EditTaskModal({
                 className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.dueDate ? 'border-red-500' : 'dark:border-zinc-700'}`}
               />
               {errors.dueDate && (
-                <p className="text-red-500 text-xs mt-1">{errors.dueDate.message}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.dueDate.message}
+                </p>
               )}
             </div>
 
@@ -358,18 +396,22 @@ function EditTaskModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">Status</label>
+              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">
+                Status
+              </label>
               <select
                 {...register('status')}
                 className="w-full p-2 border rounded dark:bg-zinc-900 dark:border-zinc-700 dark:text-white">
                 <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
+                <option value="InProgress">In Progress</option>
                 <option value="Completed">Completed</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">Notes</label>
+              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">
+                Notes
+              </label>
               <textarea
                 {...register('notes')}
                 className="w-full p-2 border rounded dark:bg-zinc-900 dark:border-zinc-700 dark:text-white h-24"

@@ -1,28 +1,32 @@
 'use client';
-
-import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
+    if (status === 'unauthenticated') {
       router.push('/login');
-    } else if (!authorized) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAuthorized(true);
     }
-  }, [router, authorized]);
+  }, [status, router]);
 
-  if (!authorized) {
-    return null; // Prevent flash of content
+  if (status === 'loading') {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        Loading session...
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return null;
   }
 
   return <>{children}</>;
