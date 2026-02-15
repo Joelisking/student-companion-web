@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -44,7 +44,8 @@ export default function TaskList({
   const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -57,7 +58,7 @@ export default function TaskList({
 
   const { data: session } = useSession();
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     if (!session?.user?.id) return;
     try {
       // Backend expects X-User-Id or Authorization header.
@@ -81,23 +82,34 @@ export default function TaskList({
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (session?.user?.id) {
       loadTasks();
     }
-  }, [refreshTrigger, session?.user?.id]);
+  }, [refreshTrigger, session?.user?.id, loadTasks]);
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
+  const handleDeleteClick = (task: Task) => {
+    setTaskToDelete(task);
+    setFeedback(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+    setIsDeleting(true);
     setFeedback(null);
     try {
-      await fetchAPI(`/api/tasks/${id}`, { method: 'DELETE' });
+      await fetchAPI(`/api/tasks/${taskToDelete.id}`, {
+        method: 'DELETE',
+      });
       setFeedback({ type: 'success', text: 'Task deleted.' });
       onTaskMutated?.();
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+      setTasks((prev) =>
+        prev.filter((t) => t.id !== taskToDelete.id)
+      );
       clearFeedback();
+      setTaskToDelete(null);
     } catch (err) {
       setFeedback({
         type: 'error',
@@ -108,7 +120,7 @@ export default function TaskList({
       });
       clearFeedback();
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -158,8 +170,8 @@ export default function TaskList({
               key={task.id}
               task={task}
               onEdit={() => setEditingTask(task)}
-              onDelete={() => handleDelete(task.id)}
-              isDeleting={deletingId === task.id}
+              onDelete={() => handleDeleteClick(task)}
+              isDeleting={isDeleting && taskToDelete?.id === task.id}
             />
           ))}
         </div>
@@ -185,6 +197,16 @@ export default function TaskList({
           onError={(message) => {
             setFeedback({ type: 'error', text: message });
           }}
+        />
+      )}
+
+      {taskToDelete && (
+        <DeleteConfirmationModal
+          taskTitle={taskToDelete.title}
+          isOpen={!!taskToDelete}
+          onClose={() => setTaskToDelete(null)}
+          onConfirm={confirmDelete}
+          isDeleting={isDeleting}
         />
       )}
     </div>
@@ -466,6 +488,56 @@ function TaskModal({
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DeleteConfirmationModal({
+  taskTitle,
+  isOpen,
+  onClose,
+  onConfirm,
+  isDeleting,
+}: {
+  taskTitle: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}>
+      <div
+        className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 w-full max-w-sm p-6"
+        onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+          Delete Task
+        </h3>
+        <p className="text-zinc-600 dark:text-zinc-300 mb-6">
+          Are you sure you want to delete{' '}
+          <span className="font-semibold">
+            &quot;{taskTitle}&quot;
+          </span>
+          ? This action cannot be undone.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
       </div>
     </div>
