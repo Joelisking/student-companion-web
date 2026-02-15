@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
+import { signIn } from 'next-auth/react';
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,40 +18,33 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // ... inside component ...
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const res = await fetch(
-        'http://localhost:5001/api/auth/login',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+      });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Login failed');
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      // Login successful
-      // Store token/userId if needed, for now just redirect
-      // In a real app, we'd use NextAuth or a context to store session
-      localStorage.setItem('userId', data.userId);
-      router.push('/dashboard');
+      if (result?.ok) {
+        router.push('/tasks');
+        router.refresh();
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('Something went wrong');
+        setError('Invalid credentials');
       }
     } finally {
       setLoading(false);

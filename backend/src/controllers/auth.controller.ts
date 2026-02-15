@@ -28,7 +28,9 @@ export class AuthController {
         return;
       }
 
-      res.status(200).json({ userId: result.userId });
+      res
+        .status(200)
+        .json({ userId: result.userId, email: result.email });
     } catch (err) {
       next(err);
     }
