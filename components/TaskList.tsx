@@ -43,6 +43,7 @@ export default function TaskList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
@@ -124,9 +125,16 @@ export default function TaskList({
 
   return (
     <div className="w-full max-w-4xl space-y-4">
-      <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-        Upcoming Tasks
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+          Upcoming Tasks
+        </h2>
+        <button
+          onClick={() => setIsCreating(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors">
+          Create Task
+        </button>
+      </div>
 
       {feedback && (
         <div
@@ -157,13 +165,20 @@ export default function TaskList({
         </div>
       )}
 
-      {editingTask && (
-        <EditTaskModal
+      {(editingTask || isCreating) && (
+        <TaskModal
           task={editingTask}
-          onClose={() => setEditingTask(null)}
-          onSuccess={() => {
-            setFeedback({ type: 'success', text: 'Task updated.' });
+          onClose={() => {
             setEditingTask(null);
+            setIsCreating(false);
+          }}
+          onSuccess={() => {
+            setFeedback({
+              type: 'success',
+              text: editingTask ? 'Task updated.' : 'Task created.',
+            });
+            setEditingTask(null);
+            setIsCreating(false);
             onTaskMutated?.();
             loadTasks();
           }}
@@ -251,20 +266,29 @@ function TaskCard({
   );
 }
 
-function EditTaskModal({
+function TaskModal({
   task,
   onClose,
   onSuccess,
   onError,
 }: {
-  task: Task;
+  task?: Task | null;
   onClose: () => void;
   onSuccess: () => void;
   onError: (message: string) => void;
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const dueDateLocal = task.dueDate.slice(0, 16);
+  const isEditing = !!task;
+  const initialDate = new Date();
+  initialDate.setMinutes(
+    initialDate.getMinutes() - initialDate.getTimezoneOffset()
+  );
+  const defaultDueDate = initialDate.toISOString().slice(0, 16);
+
+  const dueDateLocal = task?.dueDate
+    ? task.dueDate.slice(0, 16)
+    : defaultDueDate;
 
   const {
     register,
@@ -273,27 +297,32 @@ function EditTaskModal({
   } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: task.title,
-      course: task.course,
+      title: task?.title ?? '',
+      course: task?.course ?? '',
       dueDate: dueDateLocal,
-      priority: task.priority,
-      complexity: task.complexity,
-      status: task.status,
-      notes: task.notes ?? '',
+      priority: task?.priority ?? 'Medium',
+      complexity: task?.complexity ?? 'Moderate',
+      status: task?.status ?? 'Pending',
+      notes: task?.notes ?? '',
     },
   });
 
   const onSubmit = async (data: TaskFormData) => {
     setSubmitError(null);
     try {
-      await fetchAPI(`/api/tasks/${task.id}`, {
-        method: 'PUT',
+      const url = isEditing ? `/api/tasks/${task.id}` : '/api/tasks';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      await fetchAPI(url, {
+        method,
         body: JSON.stringify(data),
       });
       onSuccess();
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : 'Failed to update task';
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isEditing ? 'update' : 'create'} task`;
       setSubmitError(msg);
       onError(msg);
     }
@@ -308,7 +337,7 @@ function EditTaskModal({
         onClick={(e) => e.stopPropagation()}>
         <div className="p-6">
           <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-            Edit Task
+            {isEditing ? 'Edit Task' : 'Create Task'}
           </h3>
 
           {submitError && (
@@ -429,7 +458,11 @@ function EditTaskModal({
                 type="submit"
                 disabled={isSubmitting}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors disabled:opacity-50">
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting
+                  ? 'Saving...'
+                  : isEditing
+                    ? 'Save'
+                    : 'Create'}
               </button>
             </div>
           </form>
