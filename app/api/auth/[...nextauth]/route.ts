@@ -1,7 +1,10 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
-const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const backendUrl =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:5001';
 
 const handler = NextAuth({
   providers: [
@@ -13,17 +16,35 @@ const handler = NextAuth({
       },
       async authorize(credentials) {
         const email = credentials?.email;
-        if (!email || typeof email !== 'string') return null;
+        const password = credentials?.password;
+
+        if (!email || !password) return null;
+
         try {
           const res = await fetch(`${backendUrl}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email.trim() }),
+            body: JSON.stringify({
+              email: email,
+              password: password,
+            }),
           });
+
           if (!res.ok) return null;
-          const data = (await res.json()) as { userId: string };
-          return { id: data.userId, email: email.trim(), name: email.trim() };
-        } catch {
+
+          const data = await res.json();
+          // Adjust based on your backend response structure
+          // We expect { userId: string, email: string }
+          if (data && data.userId) {
+            return {
+              id: data.userId,
+              email: data.email || email,
+              name: data.email || email,
+            };
+          }
+          return null;
+        } catch (e) {
+          console.error('Auth error:', e);
           return null;
         }
       },
@@ -32,15 +53,21 @@ const handler = NextAuth({
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   callbacks: {
     jwt({ token, user }) {
-      if (user) token.sub = user.id;
+      if (user) {
+        token.sub = user.id;
+        token.email = user.email;
+      }
       return token;
     },
     session({ session, token }) {
-      if (session.user) session.user.id = token.sub ?? '';
+      if (session.user) {
+        session.user.id = token.sub as string;
+        session.user.email = token.email as string;
+      }
       return session;
     },
   },
-  pages: { signIn: '/' },
+  pages: { signIn: '/login' },
 });
 
 export { handler as GET, handler as POST };
