@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
+import { useSession } from 'next-auth/react';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -12,7 +13,7 @@ const taskSchema = z.object({
   dueDate: z.string().min(1, 'Due Date is required'),
   priority: z.enum(['High', 'Medium', 'Low']),
   complexity: z.enum(['Simple', 'Moderate', 'Complex']),
-  status: z.enum(['Pending', 'In Progress', 'Completed']),
+  status: z.enum(['Pending', 'InProgress', 'Completed']),
   notes: z.string().optional(),
 });
 
@@ -25,7 +26,7 @@ export interface Task {
   dueDate: string;
   priority: 'High' | 'Medium' | 'Low';
   complexity: 'Simple' | 'Moderate' | 'Complex';
-  status: 'Pending' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'InProgress' | 'Completed';
   notes?: string | null;
 }
 
@@ -34,57 +35,92 @@ interface TaskListProps {
   onTaskMutated?: () => void;
 }
 
-export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskListProps) {
+export default function TaskList({
+  refreshTrigger = 0,
+  onTaskMutated,
+}: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const clearFeedback = () => {
     const t = setTimeout(() => setFeedback(null), 4000);
     return () => clearTimeout(t);
   };
 
-  const loadTasks = async () => {
+  const { data: session } = useSession();
+
+  const loadTasks = useCallback(async () => {
+    if (!session?.user?.id) return;
     try {
-      const data = await fetchAPI<Task[]>('/api/tasks');
+      // Backend expects X-User-Id or Authorization header.
+      // Since we are proxying or calling directly, let's include X-User-Id from session.
+      const data = await fetchAPI<Task[]>('/api/tasks', {
+        headers: {
+          'X-User-Id': session.user.id,
+        },
+      });
       const sorted = (Array.isArray(data) ? data : []).sort(
-        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        (a, b) =>
+          new Date(a.dueDate).getTime() -
+          new Date(b.dueDate).getTime()
       );
       setTasks(sorted);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load tasks'
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
 
   useEffect(() => {
-    loadTasks();
-    const interval = setInterval(loadTasks, 5000);
-    return () => clearInterval(interval);
-  }, [refreshTrigger]);
+    if (session?.user?.id) {
+      loadTasks();
+    }
+  }, [refreshTrigger, session?.user?.id, loadTasks]);
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id);
+  const handleDeleteClick = (task: Task) => {
+    setTaskToDelete(task);
+    setFeedback(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+    setIsDeleting(true);
     setFeedback(null);
     try {
-      await fetchAPI(`/api/tasks/${id}`, { method: 'DELETE' });
+      await fetchAPI(`/api/tasks/${taskToDelete.id}`, {
+        method: 'DELETE',
+      });
       setFeedback({ type: 'success', text: 'Task deleted.' });
       onTaskMutated?.();
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+      setTasks((prev) =>
+        prev.filter((t) => t.id !== taskToDelete.id)
+      );
       clearFeedback();
+      setTaskToDelete(null);
     } catch (err) {
       setFeedback({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to delete task',
+        text:
+          err instanceof Error
+            ? err.message
+            : 'Failed to delete task',
       });
       clearFeedback();
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -101,9 +137,16 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
 
   return (
     <div className="w-full max-w-4xl space-y-4">
-      <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-        Upcoming Tasks
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+          Upcoming Tasks
+        </h2>
+        <button
+          onClick={() => setIsCreating(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors">
+          Create Task
+        </button>
+      </div>
 
       {feedback && (
         <div
@@ -127,26 +170,43 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
               key={task.id}
               task={task}
               onEdit={() => setEditingTask(task)}
-              onDelete={() => handleDelete(task.id)}
-              isDeleting={deletingId === task.id}
+              onDelete={() => handleDeleteClick(task)}
+              isDeleting={isDeleting && taskToDelete?.id === task.id}
             />
           ))}
         </div>
       )}
 
-      {editingTask && (
-        <EditTaskModal
+      {(editingTask || isCreating) && (
+        <TaskModal
           task={editingTask}
-          onClose={() => setEditingTask(null)}
-          onSuccess={() => {
-            setFeedback({ type: 'success', text: 'Task updated.' });
+          onClose={() => {
             setEditingTask(null);
+            setIsCreating(false);
+          }}
+          onSuccess={() => {
+            setFeedback({
+              type: 'success',
+              text: editingTask ? 'Task updated.' : 'Task created.',
+            });
+            setEditingTask(null);
+            setIsCreating(false);
             onTaskMutated?.();
             loadTasks();
           }}
           onError={(message) => {
             setFeedback({ type: 'error', text: message });
           }}
+        />
+      )}
+
+      {taskToDelete && (
+        <DeleteConfirmationModal
+          taskTitle={taskToDelete.title}
+          isOpen={!!taskToDelete}
+          onClose={() => setTaskToDelete(null)}
+          onConfirm={confirmDelete}
+          isDeleting={isDeleting}
         />
       )}
     </div>
@@ -182,11 +242,13 @@ function TaskCard({
             className={`px-2 py-0.5 rounded text-xs font-medium ${
               task.status === 'Completed'
                 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                : task.status === 'In Progress'
+                : task.status === 'InProgress'
                   ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
                   : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
             }`}>
-            {task.status}
+            {task.status === 'InProgress'
+              ? 'In Progress'
+              : task.status}
           </span>
         </div>
         <h3
@@ -194,7 +256,9 @@ function TaskCard({
           title={task.title}>
           {task.title}
         </h3>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">{task.course}</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">
+          {task.course}
+        </p>
         <div className="text-sm text-zinc-600 dark:text-zinc-300 mb-2">
           <p>Due: {new Date(task.dueDate).toLocaleString()}</p>
           <p>Complexity: {task.complexity}</p>
@@ -224,20 +288,29 @@ function TaskCard({
   );
 }
 
-function EditTaskModal({
+function TaskModal({
   task,
   onClose,
   onSuccess,
   onError,
 }: {
-  task: Task;
+  task?: Task | null;
   onClose: () => void;
   onSuccess: () => void;
   onError: (message: string) => void;
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const dueDateLocal = task.dueDate.slice(0, 16);
+  const isEditing = !!task;
+  const initialDate = new Date();
+  initialDate.setMinutes(
+    initialDate.getMinutes() - initialDate.getTimezoneOffset()
+  );
+  const defaultDueDate = initialDate.toISOString().slice(0, 16);
+
+  const dueDateLocal = task?.dueDate
+    ? task.dueDate.slice(0, 16)
+    : defaultDueDate;
 
   const {
     register,
@@ -246,26 +319,32 @@ function EditTaskModal({
   } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: task.title,
-      course: task.course,
+      title: task?.title ?? '',
+      course: task?.course ?? '',
       dueDate: dueDateLocal,
-      priority: task.priority,
-      complexity: task.complexity,
-      status: task.status,
-      notes: task.notes ?? '',
+      priority: task?.priority ?? 'Medium',
+      complexity: task?.complexity ?? 'Moderate',
+      status: task?.status ?? 'Pending',
+      notes: task?.notes ?? '',
     },
   });
 
   const onSubmit = async (data: TaskFormData) => {
     setSubmitError(null);
     try {
-      await fetchAPI(`/api/tasks/${task.id}`, {
-        method: 'PUT',
+      const url = isEditing ? `/api/tasks/${task.id}` : '/api/tasks';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      await fetchAPI(url, {
+        method,
         body: JSON.stringify(data),
       });
       onSuccess();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to update task';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isEditing ? 'update' : 'create'} task`;
       setSubmitError(msg);
       onError(msg);
     }
@@ -280,7 +359,7 @@ function EditTaskModal({
         onClick={(e) => e.stopPropagation()}>
         <div className="p-6">
           <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-            Edit Task
+            {isEditing ? 'Edit Task' : 'Create Task'}
           </h3>
 
           {submitError && (
@@ -289,16 +368,22 @@ function EditTaskModal({
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">Title *</label>
+              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">
+                Title *
+              </label>
               <input
                 {...register('title')}
                 type="text"
                 className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.title ? 'border-red-500' : 'dark:border-zinc-700'}`}
               />
               {errors.title && (
-                <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.title.message}
+                </p>
               )}
             </div>
 
@@ -312,7 +397,9 @@ function EditTaskModal({
                 className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.course ? 'border-red-500' : 'dark:border-zinc-700'}`}
               />
               {errors.course && (
-                <p className="text-red-500 text-xs mt-1">{errors.course.message}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.course.message}
+                </p>
               )}
             </div>
 
@@ -326,7 +413,9 @@ function EditTaskModal({
                 className={`w-full p-2 border rounded dark:bg-zinc-900 dark:text-white ${errors.dueDate ? 'border-red-500' : 'dark:border-zinc-700'}`}
               />
               {errors.dueDate && (
-                <p className="text-red-500 text-xs mt-1">{errors.dueDate.message}</p>
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.dueDate.message}
+                </p>
               )}
             </div>
 
@@ -358,18 +447,22 @@ function EditTaskModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">Status</label>
+              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">
+                Status
+              </label>
               <select
                 {...register('status')}
                 className="w-full p-2 border rounded dark:bg-zinc-900 dark:border-zinc-700 dark:text-white">
                 <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
+                <option value="InProgress">In Progress</option>
                 <option value="Completed">Completed</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">Notes</label>
+              <label className="block text-sm font-medium mb-1 dark:text-zinc-300">
+                Notes
+              </label>
               <textarea
                 {...register('notes')}
                 className="w-full p-2 border rounded dark:bg-zinc-900 dark:border-zinc-700 dark:text-white h-24"
@@ -387,10 +480,64 @@ function EditTaskModal({
                 type="submit"
                 disabled={isSubmitting}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors disabled:opacity-50">
-                {isSubmitting ? 'Saving...' : 'Save'}
+                {isSubmitting
+                  ? 'Saving...'
+                  : isEditing
+                    ? 'Save'
+                    : 'Create'}
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DeleteConfirmationModal({
+  taskTitle,
+  isOpen,
+  onClose,
+  onConfirm,
+  isDeleting,
+}: {
+  taskTitle: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}>
+      <div
+        className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 w-full max-w-sm p-6"
+        onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+          Delete Task
+        </h3>
+        <p className="text-zinc-600 dark:text-zinc-300 mb-6">
+          Are you sure you want to delete{' '}
+          <span className="font-semibold">
+            &quot;{taskTitle}&quot;
+          </span>
+          ? This action cannot be undone.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
       </div>
     </div>

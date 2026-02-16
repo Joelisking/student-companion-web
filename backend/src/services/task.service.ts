@@ -49,19 +49,53 @@ function serializeTask(
   };
 }
 
+export interface TaskQueryOptions {
+  status?: string;
+  priority?: string;
+  sortBy?: string;
+  order?: 'asc' | 'desc';
+}
+
 export async function getAllTasks(
-  userId: string
+  userId: string,
+  options: TaskQueryOptions = {}
 ): Promise<SerializedTask[]> {
   const tasks = await prisma.task.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
   });
-  return tasks.map((t) => {
+
+  let results = tasks.map((t) => {
     const s = serializeTask(t);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { userId: _u, ...rest } = s;
     return rest as SerializedTask;
   });
+
+  // Apply status filter
+  if (options.status) {
+    results = results.filter((t) => t.status === options.status);
+  }
+
+  // Apply priority filter
+  if (options.priority) {
+    results = results.filter((t) => t.priority === options.priority);
+  }
+
+  // Apply sorting
+  if (options.sortBy) {
+    const field = options.sortBy as keyof SerializedTask;
+    const direction = options.order === 'asc' ? 1 : -1;
+    results.sort((a, b) => {
+      const valA = a[field] ?? '';
+      const valB = b[field] ?? '';
+      if (valA < valB) return -1 * direction;
+      if (valA > valB) return 1 * direction;
+      return 0;
+    });
+  }
+
+  return results;
 }
 
 // Internal use only - strictly for fallback checks

@@ -51,7 +51,7 @@ export async function register(
 export async function login(
   email: string,
   password: string
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; email: string } | null> {
   const normalizedEmail = email.trim().toLowerCase();
 
   const user = await prisma.user.findUnique({
@@ -68,5 +68,5 @@ export async function login(
     return null;
   }
 
-  return { userId: user.id };
+  return { userId: user.id, email: user.email! };
 }
