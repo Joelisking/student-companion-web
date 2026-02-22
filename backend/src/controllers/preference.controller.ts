@@ -1,6 +1,5 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { validatePreferencesBody } from '../lib/validatePreferences';
 import * as preferenceService from '../services/preference.service';
 
 export class PreferenceController {
@@ -14,31 +13,22 @@ export class PreferenceController {
     }
   };
 
+  /** POST /api/preferences — body validated by preferencesSchema middleware */
   public savePreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId!;
-      const validation = validatePreferencesBody(req.body);
-      if (!validation.ok) {
-        res.status(400).json({ message: validation.message });
-        return;
-      }
-      const saved = await preferenceService.savePreferencesForUser(userId, validation.data);
+      const saved = await preferenceService.savePreferencesForUser(userId, req.body);
       res.status(201).json(saved);
     } catch (err) {
       next(err);
     }
   };
 
-  /** PUT: creates or updates preferences for authenticated user; returns 200 with updated preferences */
+  /** PUT /api/preferences — body validated by preferencesSchema middleware */
   public updatePreferences = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.userId!;
-      const validation = validatePreferencesBody(req.body);
-      if (!validation.ok) {
-        res.status(400).json({ message: validation.message });
-        return;
-      }
-      const updated = await preferenceService.savePreferencesForUser(userId, validation.data);
+      const updated = await preferenceService.savePreferencesForUser(userId, req.body);
       res.status(200).json(updated);
     } catch (err) {
       next(err);
