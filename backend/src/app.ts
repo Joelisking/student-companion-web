@@ -10,7 +10,8 @@ import preferencesRoutes from './routes/preferences.routes';
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
+// FRONTEND_URL is validated as required by src/lib/env.ts
+const allowedOrigins = (process.env.FRONTEND_URL ?? '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
