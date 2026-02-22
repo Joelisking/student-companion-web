@@ -32,128 +32,132 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await fetch(
-        'http://localhost:5001/api/auth/register',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
+      const res = await fetch('http://localhost:5001/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
+      if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      // Registration successful
       router.push('/login?registered=true');
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Something went wrong');
-      }
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-2">
-      <div className="w-full max-w-md space-y-8 px-4">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Sign up for an account
-          </h2>
+    <div
+      className="min-h-screen bg-slate-50 flex items-center justify-center px-4"
+      style={{ colorScheme: 'light' }}
+    >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=DM+Sans:wght@400;500;600&display=swap');
+        .auth-font { font-family: 'DM Sans', system-ui, sans-serif; }
+        .auth-display { font-family: 'Fraunces', Georgia, serif; }
+        .auth-input:focus { outline: none; border-color: #2563EB; box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+        .auth-input { transition: border-color 0.15s, box-shadow 0.15s; }
+        .auth-btn { transition: background 0.15s, transform 0.1s; }
+        .auth-btn:hover:not(:disabled) { background: #1D4ED8; }
+        .auth-btn:active:not(:disabled) { transform: scale(0.99); }
+        .fade-in { animation: fadeIn 0.4s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      <div className="fade-in auth-font w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <span className="auth-display text-2xl font-semibold text-slate-800">
+            Student<span style={{ color: '#2563EB' }}>.</span>
+          </span>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="-space-y-px rounded-md shadow-sm">
+
+        {/* Card */}
+        <div
+          className="bg-white rounded-2xl p-8"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)', border: '1px solid #E2E8F0' }}
+        >
+          <h1 className="auth-display text-2xl font-semibold text-slate-800 mb-1">
+            Create an account
+          </h1>
+          <p className="text-slate-400 text-sm mb-6">Start organising your studies</p>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                Email
               </label>
               <input
-                id="email-address"
-                name="email"
                 type="email"
                 required
-                className="relative block w-full rounded-t-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
-                placeholder="Email address"
+                className="auth-input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm placeholder:text-slate-300 bg-white"
+                placeholder="you@university.edu"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
                 Password
               </label>
               <input
-                id="password"
-                name="password"
                 type="password"
                 required
-                className="relative block w-full border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
-                placeholder="Password"
+                className="auth-input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm placeholder:text-slate-300 bg-white"
+                placeholder="Min. 8 characters"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    password: e.target.value,
-                  })
-                }
+                onChange={e => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
+
             <div>
-              <label htmlFor="confirm-password" className="sr-only">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
                 Confirm Password
               </label>
               <input
-                id="confirm-password"
-                name="confirmPassword"
                 type="password"
                 required
-                className="relative block w-full rounded-b-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 px-3"
-                placeholder="Confirm Password"
+                className="auth-input w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-800 text-sm placeholder:text-slate-300 bg-white"
+                placeholder="••••••••"
                 value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    confirmPassword: e.target.value,
-                  })
-                }
+                onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
               />
             </div>
-          </div>
 
-          {error && (
-            <div className="text-red-500 text-sm text-center">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="px-3 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
+                {error}
+              </div>
+            )}
 
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50">
-              {loading ? 'Signing up...' : 'Sign up'}
+              className="auth-btn mt-1 w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: '#2563EB' }}
+            >
+              {loading ? 'Creating account…' : 'Create account'}
             </button>
-          </div>
-          <div className="text-sm text-center">
-            <Link
-              href="/login"
-              className="font-medium text-indigo-600 hover:text-indigo-500">
-              Already have an account? Log in
-            </Link>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        <p className="text-center text-sm text-slate-400 mt-5">
+          Already have an account?{' '}
+          <Link
+            href="/login"
+            className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
