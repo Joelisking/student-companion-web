@@ -10,7 +10,12 @@ import preferencesRoutes from './routes/preferences.routes';
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
+// Trust the Next.js proxy (one hop). Required so express-rate-limit can
+// correctly identify client IPs when X-Forwarded-For is set by the proxy.
+app.set('trust proxy', 1);
+
+// FRONTEND_URL is validated as required by src/lib/env.ts
+const allowedOrigins = (process.env.FRONTEND_URL ?? '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);

@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+// Accepts datetime-local format (YYYY-MM-DDTHH:MM), full ISO 8601, or any parseable date string.
+const dueDateField = z
+  .string()
+  .refine((val) => !isNaN(Date.parse(val)), 'dueDate must be a valid date-time string');
+
 export const createTaskSchema = z.object({
   title: z
     .string()
@@ -9,9 +14,7 @@ export const createTaskSchema = z.object({
     .string()
     .min(1, 'Course cannot be empty')
     .max(100, 'Course must be 100 characters or fewer'),
-  dueDate: z
-    .string()
-    .datetime({ offset: true, message: 'dueDate must be a valid ISO 8601 date-time string' }),
+  dueDate: dueDateField,
   priority: z.enum(['High', 'Medium', 'Low']).default('Medium'),
   complexity: z.enum(['Simple', 'Moderate', 'Complex']).default('Moderate'),
   notes: z.string().max(1000, 'Notes must be 1000 characters or fewer').optional(),
@@ -28,10 +31,7 @@ export const updateTaskSchema = z.object({
     .min(1, 'Course cannot be empty')
     .max(100, 'Course must be 100 characters or fewer')
     .optional(),
-  dueDate: z
-    .string()
-    .datetime({ offset: true, message: 'dueDate must be a valid ISO 8601 date-time string' })
-    .optional(),
+  dueDate: dueDateField.optional(),
   priority: z.enum(['High', 'Medium', 'Low']).optional(),
   complexity: z.enum(['Simple', 'Moderate', 'Complex']).optional(),
   status: z.enum(['Pending', 'InProgress', 'Completed']).optional(),
