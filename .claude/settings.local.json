@@ -12,7 +12,10 @@
       "Bash(npx prisma validate:*)",
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(git tag:*)",
+      "Bash(wc:*)",
+      "Bash(curl:*)"
     ]
   }
 }

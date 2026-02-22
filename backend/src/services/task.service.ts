@@ -111,7 +111,7 @@ export async function getAllTasks(
     const field = options.sortBy as keyof SerializedTask;
     const direction = options.order === 'asc' ? 1 : -1;
     results.sort(
-      (a: { [x: string]: string }, b: { [x: string]: string }) => {
+      (a: SerializedTask, b: SerializedTask) => {
         const valA = a[field] ?? '';
         const valB = b[field] ?? '';
         if (valA < valB) return -1 * direction;
