@@ -15,7 +15,8 @@
       "Bash(npx jest:*)",
       "Bash(git tag:*)",
       "Bash(wc:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(node:*)"
     ]
   }
 }
