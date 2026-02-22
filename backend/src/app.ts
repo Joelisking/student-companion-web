@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler } from './middleware/errorHandler';
 import healthRoutes from './routes/health.routes';
@@ -13,6 +14,23 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+
+// Rate limiters
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Too many authentication attempts, please try again later.' },
+});
 
 // Middleware
 app.use(
@@ -31,9 +49,9 @@ app.use(requestLogger);
 
 // Routes (auth login is public; tasks and preferences require auth)
 app.use('/health', healthRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/tasks', tasksRoutes);
-app.use('/api/preferences', preferencesRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/tasks', generalLimiter, tasksRoutes);
+app.use('/api/preferences', generalLimiter, preferencesRoutes);
 
 // Error Handling
 app.use(errorHandler);
