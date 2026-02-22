@@ -1,6 +1,8 @@
 import prisma from '../lib/prisma';
 import {
   Task as PrismaTask,
+  TaskComplexity,
+  TaskPriority,
   TaskStatus,
 } from '../generated/prisma/client';
 
@@ -65,34 +67,58 @@ export async function getAllTasks(
     orderBy: { createdAt: 'desc' },
   });
 
-  let results = tasks.map((t) => {
-    const s = serializeTask(t);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { userId: _u, ...rest } = s;
-    return rest as SerializedTask;
-  });
+  let results = tasks.map(
+    (
+      t: {
+        id: string;
+        userId: string;
+        title: string;
+        course: string;
+        dueDate: Date;
+        priority: TaskPriority;
+        complexity: TaskComplexity;
+        status: TaskStatus;
+        notes: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      } & { userId?: string }
+    ) => {
+      const s = serializeTask(t);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { userId: _u, ...rest } = s;
+      return rest as SerializedTask;
+    }
+  );
 
   // Apply status filter
   if (options.status) {
-    results = results.filter((t) => t.status === options.status);
+    results = results.filter(
+      (t: { status: string | undefined }) =>
+        t.status === options.status
+    );
   }
 
   // Apply priority filter
   if (options.priority) {
-    results = results.filter((t) => t.priority === options.priority);
+    results = results.filter(
+      (t: { priority: string | undefined }) =>
+        t.priority === options.priority
+    );
   }
 
   // Apply sorting
   if (options.sortBy) {
     const field = options.sortBy as keyof SerializedTask;
     const direction = options.order === 'asc' ? 1 : -1;
-    results.sort((a, b) => {
-      const valA = a[field] ?? '';
-      const valB = b[field] ?? '';
-      if (valA < valB) return -1 * direction;
-      if (valA > valB) return 1 * direction;
-      return 0;
-    });
+    results.sort(
+      (a: { [x: string]: string }, b: { [x: string]: string }) => {
+        const valA = a[field] ?? '';
+        const valB = b[field] ?? '';
+        if (valA < valB) return -1 * direction;
+        if (valA > valB) return 1 * direction;
+        return 0;
+      }
+    );
   }
 
   return results;
