@@ -1,10 +1,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import './lib/env'; // validate required env vars — exits immediately if any are missing
+
 import app from './app';
 import prisma from './lib/prisma';
-
-const port = process.env.PORT || 5000;
+import { env } from './lib/env';
 
 async function startServer() {
   try {
@@ -15,8 +16,8 @@ async function startServer() {
     process.exit(1);
   }
 
-  const server = app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+  const server = app.listen(env.PORT, () => {
+    console.log(`Server is running on port ${env.PORT}`);
   });
 
   server.on('error', (err) => {
