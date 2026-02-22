@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export const errorHandler = (
   err: unknown,
   req: Request,
@@ -10,6 +12,11 @@ export const errorHandler = (
   const error = err as { stack?: string; statusCode?: number; message?: string };
   console.error(error.stack);
   const status = error.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
-  res.status(status).json({ message });
+
+  if (isProd && status === 500) {
+    res.status(500).json({ message: 'Internal Server Error' });
+    return;
+  }
+
+  res.status(status).json({ message: error.message || 'Internal Server Error' });
 };

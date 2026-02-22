@@ -24,6 +24,35 @@ async function startServer() {
     console.error('Server error:', err);
     process.exit(1);
   });
+
+  async function shutdown(signal: string) {
+    console.log(`${signal} received. Shutting down gracefully...`);
+
+    server.close(async (err) => {
+      if (err) {
+        console.error('Error closing HTTP server:', err);
+        process.exit(1);
+      }
+
+      try {
+        await prisma.$disconnect();
+        console.log('Database disconnected');
+        process.exit(0);
+      } catch (disconnectErr) {
+        console.error('Error disconnecting from database:', disconnectErr);
+        process.exit(1);
+      }
+    });
+
+    // Force exit if graceful shutdown takes too long
+    setTimeout(() => {
+      console.error('Graceful shutdown timed out. Forcing exit.');
+      process.exit(1);
+    }, 10_000).unref();
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 startServer();
