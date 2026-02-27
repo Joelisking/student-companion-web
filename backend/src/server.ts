@@ -1,10 +1,11 @@
 import dotenv from 'dotenv';
-import app from './app';
-import prisma from './lib/prisma';
-
 dotenv.config();
 
-const port = process.env.PORT || 5000;
+import './lib/env'; // validate required env vars — exits immediately if any are missing
+
+import app from './app';
+import prisma from './lib/prisma';
+import { env } from './lib/env';
 
 async function startServer() {
   try {
@@ -15,14 +16,43 @@ async function startServer() {
     process.exit(1);
   }
 
-  const server = app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+  const server = app.listen(env.PORT, () => {
+    console.log(`Server is running on port ${env.PORT}`);
   });
 
   server.on('error', (err) => {
     console.error('Server error:', err);
     process.exit(1);
   });
+
+  async function shutdown(signal: string) {
+    console.log(`${signal} received. Shutting down gracefully...`);
+
+    server.close(async (err) => {
+      if (err) {
+        console.error('Error closing HTTP server:', err);
+        process.exit(1);
+      }
+
+      try {
+        await prisma.$disconnect();
+        console.log('Database disconnected');
+        process.exit(0);
+      } catch (disconnectErr) {
+        console.error('Error disconnecting from database:', disconnectErr);
+        process.exit(1);
+      }
+    });
+
+    // Force exit if graceful shutdown takes too long
+    setTimeout(() => {
+      console.error('Graceful shutdown timed out. Forcing exit.');
+      process.exit(1);
+    }, 10_000).unref();
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 startServer();
