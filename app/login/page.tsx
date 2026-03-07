@@ -12,9 +12,11 @@ function LoginCard() {
   const registered = searchParams.get('registered');
 
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async ({ email, password }: { email: string; password: string }) => {
     setError(null);
+    setIsLoading(true);
 
     try {
       const result = await signIn('credentials', {
@@ -31,6 +33,8 @@ function LoginCard() {
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid credentials');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -50,7 +54,7 @@ function LoginCard() {
         </div>
       )}
 
-      <LoginForm onSubmit={handleSubmit} errorMessage={error ?? undefined} />
+      <LoginForm onSubmit={handleSubmit} errorMessage={error ?? undefined} isLoading={isLoading} />
     </div>
   );
 }

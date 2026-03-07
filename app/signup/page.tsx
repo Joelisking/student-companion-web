@@ -8,9 +8,11 @@ import { RegisterForm } from 'student-companion-lib';
 export default function SignupPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async ({ email, password }: { name: string; email: string; password: string }) => {
     setError(null);
+    setIsLoading(true);
 
     try {
       const res = await fetch('http://localhost:5001/api/auth/register', {
@@ -26,6 +28,8 @@ export default function SignupPage() {
       router.push('/login?registered=true');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,7 +64,7 @@ export default function SignupPage() {
           </h1>
           <p className="text-slate-400 text-sm mb-6">Start organising your studies</p>
 
-          <RegisterForm onSubmit={handleSubmit} errorMessage={error ?? undefined} />
+          <RegisterForm onSubmit={handleSubmit} errorMessage={error ?? undefined} isLoading={isLoading} />
         </div>
 
         <p className="text-center text-sm text-slate-400 mt-5">
