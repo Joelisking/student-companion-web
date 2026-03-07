@@ -10,7 +10,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async ({ email, password }: { name: string; email: string; password: string }) => {
+  const handleSubmit = async ({ name, email, password }: { name: string; email: string; password: string }) => {
     setError(null);
     setIsLoading(true);
 
@@ -18,7 +18,7 @@ export default function SignupPage() {
       const res = await fetch('http://localhost:5001/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await res.json();
