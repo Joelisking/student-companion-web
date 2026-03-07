@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { SaveCancelButtonGroup } from 'student-companion-lib';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -424,21 +425,13 @@ function TaskModal({ task, onClose, onSuccess, onError }: {
               <textarea {...register('notes')} className={`${inputClass} h-24 resize-none`} placeholder="Any additional notes…" />
             </FormField>
 
-            <div className="flex gap-3 pt-1">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
+            <div className="pt-1">
+              <SaveCancelButtonGroup
+                onSave={handleSubmit(onSubmit)}
+                onCancel={onClose}
                 disabled={isSubmitting}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-50"
-              >
-                {isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Task'}
-              </button>
+                saveLabel={isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Task'}
+              />
             </div>
           </form>
         </div>
