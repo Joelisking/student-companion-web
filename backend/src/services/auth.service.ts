@@ -24,7 +24,8 @@ export async function findOrCreateUserByEmail(
 
 export async function register(
   email: string,
-  password: string
+  password: string,
+  name?: string
 ): Promise<{ userId: string }> {
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -42,6 +43,7 @@ export async function register(
     data: {
       email: normalizedEmail,
       password: hashedPassword,
+      ...(name ? { name: name.trim() } : {}),
     },
   });
 

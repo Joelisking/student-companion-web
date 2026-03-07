@@ -22,8 +22,8 @@ export class AuthController {
   /** POST /api/auth/register — body validated by registerSchema middleware */
   public register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, password } = req.body;
-      const { userId } = await authService.register(email, password);
+      const { email, password, name } = req.body;
+      const { userId } = await authService.register(email, password, name);
       res.status(201).json({ userId });
     } catch (err: unknown) {
       if (err instanceof Error && err.message === 'Email already exists') {
