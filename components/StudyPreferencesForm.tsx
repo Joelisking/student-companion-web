@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
+import { SelectDropdown, PrimaryButton } from 'student-companion-lib';
 
 const preferencesSchema = z.object({
   preferredTime: z.enum(['Morning', 'Afternoon', 'Evening', 'Night']),
@@ -650,87 +651,24 @@ export default function StudyPreferencesForm() {
 
             {/* Section 1: Preferred time */}
             <div>
-              <p
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: '#64748b',
-                  marginBottom: 12,
-                }}>
-                When do you study?
-              </p>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 10,
-                }}>
-                {TIME_OPTIONS.map(opt => {
-                  const isActive = preferredTime === opt.value;
-                  return (
-                    <label
-                      key={opt.value}
-                      className={`pref-time-tile${isActive ? ' is-active' : ''}`}
-                      style={
-                        isActive
-                          ? {
-                              borderColor: opt.activeBorder,
-                              background: opt.activeBg,
-                            }
-                          : {}
-                      }>
-                      <input
-                        type="radio"
-                        {...register('preferredTime')}
-                        value={opt.value}
-                        style={{ display: 'none' }}
-                      />
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}>
-                        <div>
-                          <p
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: isActive ? opt.activeText : '#1e293b',
-                              marginBottom: 2,
-                            }}>
-                            {opt.label}
-                          </p>
-                          <p
-                            style={{
-                              fontSize: 11,
-                              color: isActive ? opt.activeText : '#94a3b8',
-                              opacity: isActive ? 0.75 : 1,
-                            }}>
-                            {opt.sub}
-                          </p>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 22,
-                            color: isActive ? opt.activeSymbolColor : '#cbd5e1',
-                            transition: 'color 0.15s',
-                            lineHeight: 1,
-                          }}>
-                          {opt.symbol}
-                        </span>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              {errors.preferredTime && (
-                <p style={{ color: '#ef4444', fontSize: 11, marginTop: 6 }}>
-                  {errors.preferredTime.message}
-                </p>
-              )}
+              <Controller
+                name="preferredTime"
+                control={control}
+                render={({ field }) => (
+                  <SelectDropdown
+                    label="When do you study?"
+                    id="preferredTime"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={TIME_OPTIONS.map(opt => ({
+                      value: opt.value,
+                      label: `${opt.label} (${opt.sub})`,
+                    }))}
+                    error={errors.preferredTime?.message}
+                    required
+                  />
+                )}
+              />
             </div>
 
             <div className="pref-divider" />
@@ -799,102 +737,40 @@ export default function StudyPreferencesForm() {
 
             {/* Section 3: Weekend preference */}
             <div>
-              <p
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: '#64748b',
-                  marginBottom: 12,
-                }}>
-                Weekend intensity
-              </p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {WEEKEND_OPTIONS.map(opt => {
-                  const isActive = weekendPref === opt.value;
-                  return (
-                    <label
-                      key={opt.value}
-                      className={`pref-weekend-tile${isActive ? ' is-active' : ''}`}
-                      style={
-                        isActive
-                          ? {
-                              borderColor: opt.activeBorder,
-                              background: opt.activeBg,
-                            }
-                          : {}
-                      }>
-                      <input
-                        type="radio"
-                        {...register('weekendPreference')}
-                        value={opt.value}
-                        style={{ display: 'none' }}
-                      />
-                      <p
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: isActive ? opt.activeText : '#1e293b',
-                          marginBottom: 2,
-                        }}>
-                        {opt.label}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: 11,
-                          color: isActive ? opt.activeText : '#94a3b8',
-                          opacity: isActive ? 0.8 : 1,
-                        }}>
-                        {opt.desc}
-                      </p>
-                      <IntensityBars
-                        filled={opt.bars}
-                        color={isActive ? opt.activeBarColor : '#e2e8f0'}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-              {errors.weekendPreference && (
-                <p style={{ color: '#ef4444', fontSize: 11, marginTop: 6 }}>
-                  {errors.weekendPreference.message}
-                </p>
-              )}
+              <Controller
+                name="weekendPreference"
+                control={control}
+                render={({ field }) => (
+                  <SelectDropdown
+                    label="Weekend intensity"
+                    id="weekendPreference"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={WEEKEND_OPTIONS.map(opt => ({
+                      value: opt.value,
+                      label: `${opt.label} — ${opt.desc}`,
+                    }))}
+                    error={errors.weekendPreference?.message}
+                    required
+                  />
+                )}
+              />
             </div>
 
             <div className="pref-divider" />
 
             {/* Submit */}
-            <button
+            <PrimaryButton
               type="submit"
-              disabled={status === 'submitting'}
-              className="pref-submit">
-              {status === 'submitting' ? (
-                <>
-                  <span
-                    style={{
-                      width: 14,
-                      height: 14,
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: 'white',
-                      borderRadius: '50%',
-                      animation: 'pref-spin 0.7s linear infinite',
-                      display: 'inline-block',
-                      flexShrink: 0,
-                    }}
-                  />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  {loadState === 'loaded'
-                    ? 'Update Preferences'
-                    : 'Save Preferences'}
-                  <span style={{ fontSize: 15, marginLeft: 2 }}>→</span>
-                </>
-              )}
-            </button>
+              label={
+                status === 'submitting'
+                  ? 'Saving…'
+                  : loadState === 'loaded'
+                  ? 'Update Preferences'
+                  : 'Save Preferences'
+              }
+              isLoading={status === 'submitting'}
+            />
           </form>
         </div>
       )}
