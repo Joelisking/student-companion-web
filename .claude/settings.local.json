@@ -16,7 +16,21 @@
       "Bash(git tag:*)",
       "Bash(wc:*)",
       "Bash(curl:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__atlassian__getVisibleJiraProjects",
+      "mcp__atlassian__getJiraIssueTypeMetaWithFields",
+      "mcp__atlassian__createJiraIssue",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git:*)",
+      "mcp__atlassian__searchConfluenceUsingCql",
+      "Bash(python3:*)",
+      "mcp__atlassian__getConfluencePage",
+      "mcp__atlassian__jiraRead",
+      "mcp__atlassian__fetch",
+      "mcp__atlassian__updateConfluencePage",
+      "mcp__atlassian__createConfluencePage",
+      "Bash(find /Users/joel/Documents/student-companion-web/app/api -type f -name *.ts)"
     ]
   }
 }
