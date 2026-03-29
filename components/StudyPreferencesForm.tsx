@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
-import { SelectDropdown, PrimaryButton } from 'student-companion-lib';
+import { SelectDropdown, PrimaryButton, Banner } from 'student-companion-lib';
 
 const preferencesSchema = z.object({
   preferredTime: z.enum(['Morning', 'Afternoon', 'Evening', 'Night']),
@@ -584,66 +584,18 @@ export default function StudyPreferencesForm() {
 
           {/* Banners */}
           {loadState === 'empty' && status !== 'success' && (
-            <div
-              style={{
-                background: '#f0f9ff',
-                border: '1px solid #bae6fd',
-                borderRadius: 10,
-                padding: '10px 14px',
-                marginBottom: 24,
-                fontSize: 13,
-                color: '#0369a1',
-              }}>
-              No preferences saved yet — set them below.
+            <div style={{ marginBottom: 24 }}>
+              <Banner message="No preferences saved yet — set them below." type="info" />
             </div>
           )}
           {status === 'success' && (
-            <div
-              style={{
-                background: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                borderRadius: 10,
-                padding: '10px 14px',
-                marginBottom: 24,
-                fontSize: 13,
-                color: '#15803d',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}>
-              <span
-                style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  background: '#22c55e',
-                  color: 'white',
-                  fontSize: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                ✓
-              </span>
-              {submissionMessage}
+            <div style={{ marginBottom: 24 }}>
+              <Banner message={submissionMessage} type="success" />
             </div>
           )}
           {status === 'error' && (
-            <div
-              style={{
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                borderRadius: 10,
-                padding: '10px 14px',
-                marginBottom: 24,
-                fontSize: 13,
-                color: '#dc2626',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}>
-              <span>✗</span> {submissionMessage}
+            <div style={{ marginBottom: 24 }}>
+              <Banner message={submissionMessage} type="error" />
             </div>
           )}
 
