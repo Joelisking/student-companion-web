@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
+import { Toast, Banner } from 'student-companion-lib';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -72,14 +73,18 @@ export default function TaskForm({ onSuccess }: TaskFormProps) {
       </h2>
 
       {status === 'success' && (
-        <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-sm">
-          {submissionMessage}
+        <div className="mb-4">
+          <Toast
+            message={submissionMessage}
+            type="success"
+            onDismiss={() => setStatus('idle')}
+          />
         </div>
       )}
 
       {status === 'error' && (
-        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-sm">
-          {submissionMessage}
+        <div className="mb-4">
+          <Banner message={submissionMessage} type="error" />
         </div>
       )}
 
