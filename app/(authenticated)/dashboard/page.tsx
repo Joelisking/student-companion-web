@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { fetchAPI } from '../../../utils/api';
+import TaskForm from '../../../components/TaskForm';
 
 interface Task {
   id: string;
@@ -13,16 +14,12 @@ interface Task {
 }
 
 function formatDueDate(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
+  const diffDays = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
   if (diffDays < 0) return 'Overdue';
   if (diffDays === 0) return 'Due today';
   if (diffDays === 1) return 'Due tomorrow';
   if (diffDays <= 7) return `Due in ${diffDays} days`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function dueDateColor(iso: string): string {
@@ -37,18 +34,32 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
+  const loadTasks = useCallback(() => {
+    setLoading(true);
     fetchAPI<Task[]>('/api/tasks?status=Pending&sortBy=dueDate&order=asc')
       .then(all => setTasks((all ?? []).slice(0, 5)))
       .catch(() => setTasks([]))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  const handleTaskCreated = () => {
+    setModalOpen(false);
+    loadTasks();
+  };
+
   const name = session?.user?.name ?? 'there';
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px' }}>
+      <style>{`
+        @keyframes pref-pulse { 0%,100%{opacity:1}50%{opacity:0.45} }
+        @keyframes modal-fade-in { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+      `}</style>
+
       {/* Greeting */}
       <h1
         className="auth-layout-display"
@@ -83,15 +94,32 @@ export default function DashboardPage() {
           <h2 style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', margin: 0 }}>
             Upcoming Tasks
           </h2>
-          <Link
-            href="/tasks"
-            style={{ fontSize: 13, color: '#2563eb', fontWeight: 500, textDecoration: 'none' }}
-          >
-            View all →
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => setModalOpen(true)}
+              style={{
+                padding: '6px 14px',
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              + Add Task
+            </button>
+            <Link
+              href="/tasks"
+              style={{ fontSize: 13, color: '#2563eb', fontWeight: 500, textDecoration: 'none' }}
+            >
+              View all →
+            </Link>
+          </div>
         </div>
 
-        {/* Content */}
+        {/* Task list */}
         {loading ? (
           <div style={{ padding: '20px' }}>
             {[0, 1, 2].map(i => (
@@ -108,30 +136,23 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : tasks.length === 0 ? (
-          <div
-            style={{
-              padding: '40px 20px',
-              textAlign: 'center',
-              color: '#94a3b8',
-              fontSize: 14,
-            }}
-          >
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>
             <p style={{ marginBottom: 12 }}>No upcoming tasks.</p>
-            <Link
-              href="/tasks"
+            <button
+              onClick={() => setModalOpen(true)}
               style={{
-                display: 'inline-block',
                 padding: '8px 16px',
                 background: '#2563eb',
                 color: 'white',
+                border: 'none',
                 borderRadius: 8,
                 fontSize: 13,
                 fontWeight: 500,
-                textDecoration: 'none',
+                cursor: 'pointer',
               }}
             >
               Add a task
-            </Link>
+            </button>
           </div>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: '8px 0' }}>
@@ -164,14 +185,7 @@ export default function DashboardPage() {
                   >
                     {task.title}
                   </span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: dueDateColor(task.dueDate),
-                      flexShrink: 0,
-                    }}
-                  >
+                  <span style={{ fontSize: 12, fontWeight: 500, color: dueDateColor(task.dueDate), flexShrink: 0 }}>
                     {formatDueDate(task.dueDate)}
                   </span>
                 </Link>
@@ -180,7 +194,30 @@ export default function DashboardPage() {
           </ul>
         )}
       </div>
-      <style>{`@keyframes pref-pulse { 0%,100%{opacity:1}50%{opacity:0.45} }`}</style>
+
+      {/* Quick-add modal */}
+      {modalOpen && (
+        <div
+          onClick={() => setModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ animation: 'modal-fade-in 0.18s ease', width: '100%', maxWidth: 480 }}
+          >
+            <TaskForm onSuccess={handleTaskCreated} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
