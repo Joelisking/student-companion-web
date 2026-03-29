@@ -48,6 +48,9 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }>
   Completed:  { bg: '#F0FDF4', text: '#166534', label: 'Completed' },
 };
 
+type StatusFilter = 'All' | 'Pending' | 'InProgress' | 'Completed';
+type DueDateFilter = 'All' | 'Overdue' | 'Today' | 'This week';
+
 export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +60,9 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+  const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>('All');
 
   const clearFeedback = () => {
     const t = setTimeout(() => setFeedback(null), 4000);
@@ -114,6 +120,22 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
     }
   };
 
+  const filteredTasks = tasks.filter(task => {
+    if (search && !task.title.toLowerCase().includes(search.toLowerCase())) return false;
+    if (statusFilter !== 'All' && task.status !== statusFilter) return false;
+    if (dueDateFilter !== 'All') {
+      const due = new Date(task.dueDate);
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(startOfToday.getTime() + 86400000);
+      const endOfWeek = new Date(startOfToday.getTime() + 7 * 86400000);
+      if (dueDateFilter === 'Overdue' && due >= startOfToday) return false;
+      if (dueDateFilter === 'Today' && (due < startOfToday || due >= endOfToday)) return false;
+      if (dueDateFilter === 'This week' && (due < startOfToday || due >= endOfWeek)) return false;
+    }
+    return true;
+  });
+
   if (loading && tasks.length === 0) {
     return (
       <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
@@ -148,7 +170,11 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
           <div>
             <h1 className="display-font text-3xl font-semibold text-slate-800">Tasks</h1>
             <p className="text-slate-400 text-sm mt-0.5">
-              {tasks.length === 0 ? 'No tasks yet' : `${tasks.length} task${tasks.length !== 1 ? 's' : ''}`}
+              {tasks.length === 0
+                ? 'No tasks yet'
+                : filteredTasks.length === tasks.length
+                ? `${tasks.length} task${tasks.length !== 1 ? 's' : ''}`
+                : `${filteredTasks.length} of ${tasks.length} tasks`}
             </p>
           </div>
           <button
@@ -161,6 +187,42 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
             Add Task
           </button>
         </div>
+
+        {/* Search & filters */}
+        {tasks.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            <input
+              type="text"
+              placeholder="Search tasks…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="tl-input flex-1 min-w-[180px] px-3.5 py-2 rounded-xl border border-slate-200 text-slate-800 text-sm bg-white placeholder:text-slate-300"
+              aria-label="Search tasks by title"
+            />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+              className="tl-select px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm bg-white"
+              aria-label="Filter by status"
+            >
+              <option value="All">All statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="InProgress">In Progress</option>
+              <option value="Completed">Completed</option>
+            </select>
+            <select
+              value={dueDateFilter}
+              onChange={e => setDueDateFilter(e.target.value as DueDateFilter)}
+              className="tl-select px-3.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-sm bg-white"
+              aria-label="Filter by due date"
+            >
+              <option value="All">All dates</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Today">Due today</option>
+              <option value="This week">Due this week</option>
+            </select>
+          </div>
+        )}
 
         {/* Feedback */}
         {feedback && (
@@ -193,9 +255,14 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
               Add Task
             </button>
           </div>
+        ) : filteredTasks.length === 0 ? (
+          <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-14 text-center">
+            <p className="text-slate-800 font-semibold text-sm mb-1">No matching tasks</p>
+            <p className="text-slate-400 text-sm">Try adjusting your search or filters.</p>
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {tasks.map(task => (
+            {filteredTasks.map(task => (
               <TaskCard
                 key={task.id}
                 task={task}
