@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { SaveCancelButtonGroup } from 'student-companion-lib';
+import { SaveCancelButtonGroup } from '@joel_ak/student-companion-lib';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';

@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-import { LoginForm } from 'student-companion-lib';
+import { LoginForm } from '@joel_ak/student-companion-lib';
 
 function LoginCard() {
   const router = useRouter();
