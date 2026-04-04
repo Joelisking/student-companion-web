@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { RegisterForm } from 'student-companion-lib';
+import { RegisterForm } from '@joel_ak/student-companion-lib';
 
 export default function SignupPage() {
   const router = useRouter();

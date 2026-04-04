@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
-import { SelectDropdown, PrimaryButton, Banner } from 'student-companion-lib';
+import { SelectDropdown, PrimaryButton, Banner } from '@joel_ak/student-companion-lib';
 
 const preferencesSchema = z.object({
   preferredTime: z.enum(['Morning', 'Afternoon', 'Evening', 'Night']),

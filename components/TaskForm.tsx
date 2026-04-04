@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
-import { Toast, Banner } from 'student-companion-lib';
+import { Toast, Banner } from '@joel_ak/student-companion-lib';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
