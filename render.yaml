@@ -35,3 +35,5 @@ services:
         sync: false
       - key: INTERNAL_API_SECRET
         sync: false
+      - key: NEXT_PUBLIC_FEATURE_TASK_SEARCH
+        value: false

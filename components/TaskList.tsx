@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
 import { useSession } from 'next-auth/react';
+import { featureFlags } from '../lib/featureFlags';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -188,8 +189,8 @@ export default function TaskList({ refreshTrigger = 0, onTaskMutated }: TaskList
           </button>
         </div>
 
-        {/* Search & filters */}
-        {tasks.length > 0 && (
+        {/* Search & filters — gated by NEXT_PUBLIC_FEATURE_TASK_SEARCH */}
+        {featureFlags.NEXT_PUBLIC_FEATURE_TASK_SEARCH && tasks.length > 0 && (
           <div className="flex flex-wrap gap-3">
             <input
               type="text"
