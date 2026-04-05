@@ -16,7 +16,7 @@ services:
       - key: INTERNAL_API_SECRET
         sync: false
       - key: FRONTEND_URL
-        sync: false
+        value: https://student-companion-frontend.onrender.com
 
   - type: web
     name: student-companion-web
@@ -30,7 +30,7 @@ services:
       - key: BACKEND_URL
         value: https://student-companion-api-zrcv.onrender.com
       - key: NEXTAUTH_URL
-        sync: false
+        value: https://student-companion-frontend.onrender.com
       - key: NEXTAUTH_SECRET
         sync: false
       - key: INTERNAL_API_SECRET
