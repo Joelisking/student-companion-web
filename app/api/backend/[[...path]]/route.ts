@@ -49,7 +49,7 @@ async function proxy(
   const backendPath = pathSegments.length ? pathSegments.join('/') : '';
   const targetUrl = `${backendUrl.replace(/\/$/, '')}/${backendPath}`;
 
-  const PUBLIC_PATHS = ['health', 'auth/register', 'auth/login'];
+  const PUBLIC_PATHS = ['health', 'api/auth/register', 'api/auth/login'];
   const isPublicPath = PUBLIC_PATHS.includes(backendPath);
   const headers = new Headers(request.headers);
   headers.delete('connection');
