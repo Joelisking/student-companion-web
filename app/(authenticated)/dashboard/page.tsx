@@ -5,12 +5,22 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { fetchAPI } from '../../../utils/api';
 import TaskForm from '../../../components/TaskForm';
+import { StatCard } from '@joel_ak/student-companion-lib';
+import { featureFlags } from '../../../lib/featureFlags';
 
 interface Task {
   id: string;
   title: string;
   dueDate: string;
   status: string;
+}
+
+interface TaskStats {
+  total: number;
+  completed: number;
+  inProgress: number;
+  pending: number;
+  completionPercentage: number;
 }
 
 function formatDueDate(iso: string): string {
@@ -35,6 +45,8 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [stats, setStats] = useState<TaskStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const loadTasks = useCallback(() => {
     setLoading(true);
@@ -44,7 +56,17 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const loadStats = useCallback(() => {
+    if (!featureFlags.NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET) return;
+    setStatsLoading(true);
+    fetchAPI<TaskStats>('/api/stats')
+      .then(data => setStats(data))
+      .catch(() => setStats(null))
+      .finally(() => setStatsLoading(false));
+  }, []);
+
   useEffect(() => { loadTasks(); }, [loadTasks]);
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const handleTaskCreated = () => {
     setModalOpen(false);
@@ -70,6 +92,37 @@ export default function DashboardPage() {
       <p style={{ color: '#64748b', fontSize: 14, marginBottom: 32 }}>
         Here's what's coming up for you.
       </p>
+
+      {/* Progress Widget — gated by NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET */}
+      {featureFlags.NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET && (
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', margin: '0 0 12px 0' }}>
+            Study Progress
+          </h2>
+          {statsLoading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              {[0, 1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  style={{
+                    height: 80,
+                    background: '#f8fafc',
+                    borderRadius: 8,
+                    animation: 'pref-pulse 1.5s ease-in-out infinite',
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              <StatCard label="Total Tasks" value={stats?.total ?? 0} />
+              <StatCard label="Completed" value={stats?.completed ?? 0} trend={stats && stats.completed > 0 ? 'up' : 'neutral'} />
+              <StatCard label="In Progress" value={stats?.inProgress ?? 0} />
+              <StatCard label="Completion" value={`${stats?.completionPercentage ?? 0}%`} trend={stats && stats.completionPercentage >= 50 ? 'up' : 'neutral'} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Upcoming Tasks widget */}
       <div

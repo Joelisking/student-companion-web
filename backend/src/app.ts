@@ -7,6 +7,7 @@ import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import tasksRoutes from './routes/tasks.routes';
 import preferencesRoutes from './routes/preferences.routes';
+import statsRoutes from './routes/stats.routes';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/health', healthRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/tasks', generalLimiter, tasksRoutes);
 app.use('/api/preferences', generalLimiter, preferencesRoutes);
+app.use('/api/stats', generalLimiter, statsRoutes);
 
 // Error Handling
 app.use(errorHandler);
