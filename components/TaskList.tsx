@@ -316,7 +316,10 @@ function TaskCard({ task, onEdit, onDelete, isDeleting }: {
   const isOverdue = due < new Date() && task.status !== 'Completed';
 
   return (
-    <div className="task-card bg-white border border-slate-100 rounded-2xl p-5 flex flex-col justify-between">
+    <div
+      className="task-card bg-white border border-slate-100 rounded-2xl p-5 flex flex-col justify-between"
+      style={isOverdue ? { borderLeft: '3px solid #DC2626' } : undefined}
+    >
       <div>
         {/* Badges */}
         <div className="flex items-center justify-between gap-2 mb-3">
