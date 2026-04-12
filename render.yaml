@@ -37,3 +37,5 @@ services:
         sync: false
       - key: NEXT_PUBLIC_FEATURE_TASK_SEARCH
         value: false
+      - key: NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET
+        value: false

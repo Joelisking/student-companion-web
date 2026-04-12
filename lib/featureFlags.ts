@@ -5,6 +5,10 @@ const featureFlagSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform(v => v === 'true'),
+  NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform(v => v === 'true'),
 });
 
 const parsed = featureFlagSchema.safeParse({
