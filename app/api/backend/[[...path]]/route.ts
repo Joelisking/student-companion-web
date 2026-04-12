@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 
 const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
@@ -50,7 +50,7 @@ async function proxy(
   const backendPath = pathSegments.length ? pathSegments.join('/') : '';
   const targetUrl = `${backendUrl.replace(/\/$/, '')}/${backendPath}`;
 
-  const PUBLIC_PATHS = ['health', 'auth/register', 'auth/login'];
+  const PUBLIC_PATHS = ['health', 'api/auth/register', 'api/auth/login'];
   const isPublicPath = PUBLIC_PATHS.includes(backendPath);
   const headers = new Headers(request.headers);
   headers.delete('connection');
