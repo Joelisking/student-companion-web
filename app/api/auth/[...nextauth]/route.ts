@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth';
+import NextAuth, { type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
 const backendUrl =
@@ -6,7 +6,7 @@ const backendUrl =
   process.env.NEXT_PUBLIC_API_URL ||
   'http://localhost:5001';
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
       name: 'Credentials',
@@ -68,6 +68,7 @@ const handler = NextAuth({
     },
   },
   pages: { signIn: '/login' },
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

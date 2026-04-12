@@ -1,4 +1,5 @@
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 import { NextRequest, NextResponse } from 'next/server';
 
 const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
@@ -55,14 +56,11 @@ async function proxy(
   headers.delete('connection');
 
   if (!isPublicPath) {
-    const token = await getToken({
-      req: request as unknown as Parameters<typeof getToken>[0]['req'],
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-    if (!token?.sub) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json({ message: 'Authentication required' }, { status: 401 });
     }
-    headers.set('X-User-Id', token.sub);
+    headers.set('X-User-Id', session.user.id);
     if (internalSecret) headers.set('X-Internal-Secret', internalSecret);
   }
 
