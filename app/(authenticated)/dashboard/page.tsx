@@ -47,6 +47,8 @@ export default function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const loadTasks = useCallback(() => {
     setLoading(true);
@@ -65,8 +67,32 @@ export default function DashboardPage() {
       .finally(() => setStatsLoading(false));
   }, []);
 
+  const loadOverdue = useCallback(() => {
+    const now = new Date();
+    fetchAPI<Task[]>('/api/tasks')
+      .then(all => {
+        const count = (all ?? []).filter(
+          t => t.status !== 'Completed' && new Date(t.dueDate) < now
+        ).length;
+        setOverdueCount(count);
+      })
+      .catch(() => {});
+  }, []);
+
+  const dismissBanner = () => {
+    sessionStorage.setItem('overdue-banner-dismissed', '1');
+    setBannerDismissed(true);
+  };
+
+  useEffect(() => {
+    if (sessionStorage.getItem('overdue-banner-dismissed') === '1') {
+      setBannerDismissed(true);
+    }
+  }, []);
+
   useEffect(() => { loadTasks(); }, [loadTasks]);
   useEffect(() => { loadStats(); }, [loadStats]);
+  useEffect(() => { loadOverdue(); }, [loadOverdue]);
 
   const handleTaskCreated = () => {
     setModalOpen(false);
@@ -92,6 +118,48 @@ export default function DashboardPage() {
       <p style={{ color: '#64748b', fontSize: 14, marginBottom: 32 }}>
         Here's what's coming up for you.
       </p>
+
+      {/* Overdue reminder banner — dismissible per session */}
+      {!bannerDismissed && overdueCount > 0 && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span aria-hidden="true" style={{ fontSize: 16 }}>⚠️</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#B91C1C' }}>
+              You have {overdueCount} overdue task{overdueCount !== 1 ? 's' : ''}.{' '}
+              <Link href="/tasks" style={{ color: '#B91C1C', textDecoration: 'underline' }}>
+                View tasks →
+              </Link>
+            </span>
+          </div>
+          <button
+            onClick={dismissBanner}
+            aria-label="Dismiss overdue reminder"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#B91C1C',
+              fontSize: 20,
+              lineHeight: 1,
+              padding: '0 4px',
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Progress Widget — gated by NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET */}
       {featureFlags.NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET && (
