@@ -13,6 +13,7 @@ const featureFlagSchema = z.object({
 
 const parsed = featureFlagSchema.safeParse({
   NEXT_PUBLIC_FEATURE_TASK_SEARCH: process.env.NEXT_PUBLIC_FEATURE_TASK_SEARCH,
+  NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET: process.env.NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET,
 });
 
 if (!parsed.success) {
