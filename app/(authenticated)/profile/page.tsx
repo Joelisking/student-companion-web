@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { AvatarInitials, Tabs, TextInput, PrimaryButton } from '@joel_ak/student-companion-lib';
+import { AvatarInitials, Tabs, TextInput, PasswordInput, PrimaryButton } from '@joel_ak/student-companion-lib';
 import { fetchAPI } from '../../../utils/api';
 
 interface Profile {
@@ -11,21 +11,13 @@ interface Profile {
   email: string | null;
 }
 
-export default function ProfilePage() {
-  const { data: session, update } = useSession();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [name, setName] = useState('');
+function ProfileTab({ profile, onUpdated }: { profile: Profile | null; onUpdated: (p: Profile) => void }) {
+  const { update } = useSession();
+  const [name, setName] = useState(profile?.name ?? '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  useEffect(() => {
-    fetchAPI<Profile>('/api/users/me')
-      .then(p => {
-        setProfile(p);
-        setName(p.name ?? '');
-      })
-      .catch(() => {});
-  }, []);
+  useEffect(() => { setName(profile?.name ?? ''); }, [profile]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -36,7 +28,7 @@ export default function ProfilePage() {
         method: 'PUT',
         body: JSON.stringify({ name: name.trim() }),
       });
-      setProfile(updated);
+      onUpdated(updated);
       await update({ name: updated.name });
       setMessage({ type: 'success', text: 'Profile updated successfully.' });
     } catch (err) {
@@ -46,11 +38,82 @@ export default function ProfilePage() {
     }
   };
 
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 400 }}>
+      <TextInput label="Full name" value={name} onChange={setName} placeholder="Enter your name" />
+      <TextInput label="Email" value={profile?.email ?? ''} onChange={_v => {}} disabled placeholder="Email address" />
+      {message && (
+        <p style={{ fontSize: 13, color: message.type === 'success' ? '#15803d' : '#dc2626', margin: 0 }}>
+          {message.text}
+        </p>
+      )}
+      <PrimaryButton label={saving ? 'Saving…' : 'Save changes'} onClick={handleSave} disabled={saving || !name.trim()} />
+    </div>
+  );
+}
+
+function ChangePasswordTab() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const handleChange = async () => {
+    if (!current || !next || !confirm) return;
+    if (next !== confirm) {
+      setMessage({ type: 'error', text: 'New passwords do not match.' });
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      await fetchAPI('/api/users/me/password', {
+        method: 'PUT',
+        body: JSON.stringify({ currentPassword: current, newPassword: next, confirmPassword: confirm }),
+      });
+      setCurrent(''); setNext(''); setConfirm('');
+      setMessage({ type: 'success', text: 'Password changed successfully.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to change password.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 400 }}>
+      <PasswordInput label="Current password" value={current} onChange={setCurrent} placeholder="Enter current password" />
+      <PasswordInput label="New password" value={next} onChange={setNext} placeholder="At least 8 chars, 1 uppercase, 1 number" />
+      <PasswordInput label="Confirm new password" value={confirm} onChange={setConfirm} placeholder="Repeat new password" />
+      {message && (
+        <p style={{ fontSize: 13, color: message.type === 'success' ? '#15803d' : '#dc2626', margin: 0 }}>
+          {message.text}
+        </p>
+      )}
+      <PrimaryButton
+        label={saving ? 'Saving…' : 'Change password'}
+        onClick={handleChange}
+        disabled={saving || !current || !next || !confirm}
+      />
+    </div>
+  );
+}
+
+export default function ProfilePage() {
+  const { data: session } = useSession();
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  useEffect(() => {
+    fetchAPI<Profile>('/api/users/me')
+      .then(setProfile)
+      .catch(() => {});
+  }, []);
+
   const displayName = profile?.name ?? session?.user?.name ?? '';
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 24px' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 36 }}>
         <AvatarInitials name={displayName || 'U'} size="lg" />
         <div>
@@ -68,50 +131,8 @@ export default function ProfilePage() {
 
       <Tabs
         tabs={[
-          {
-            label: 'Profile Info',
-            content: (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 400 }}>
-                <TextInput
-                  label="Full name"
-                  value={name}
-                  onChange={setName}
-                  placeholder="Enter your name"
-                />
-                <TextInput
-                  label="Email"
-                  value={profile?.email ?? ''}
-                  onChange={_v => {}}
-                  disabled
-                  placeholder="Email address"
-                />
-                {message && (
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: message.type === 'success' ? '#15803d' : '#dc2626',
-                      margin: 0,
-                    }}
-                  >
-                    {message.text}
-                  </p>
-                )}
-                <PrimaryButton
-                  label={saving ? 'Saving…' : 'Save changes'}
-                  onClick={handleSave}
-                  disabled={saving || !name.trim()}
-                />
-              </div>
-            ),
-          },
-          {
-            label: 'Change Password',
-            content: (
-              <p style={{ fontSize: 14, color: '#64748b' }}>
-                Password management coming soon.
-              </p>
-            ),
-          },
+          { label: 'Profile Info', content: <ProfileTab profile={profile} onUpdated={setProfile} /> },
+          { label: 'Change Password', content: <ChangePasswordTab /> },
         ]}
       />
     </div>
