@@ -39,3 +39,5 @@ services:
         value: false
       - key: NEXT_PUBLIC_FEATURE_PROGRESS_WIDGET
         value: true
+      - key: NEXT_PUBLIC_FEATURE_USER_PROFILE
+        value: false
