@@ -55,6 +55,9 @@ export default function AuthenticatedLayout({
           <Link href="/preferences" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 no-underline">
             Preferences
           </Link>
+          <Link href="/profile" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 no-underline">
+            Profile
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
             className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 border border-slate-200 ml-2"

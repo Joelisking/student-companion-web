@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes';
 import tasksRoutes from './routes/tasks.routes';
 import preferencesRoutes from './routes/preferences.routes';
 import statsRoutes from './routes/stats.routes';
+import usersRoutes from './routes/users.routes';
 
 const app = express();
 
@@ -59,6 +60,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/tasks', generalLimiter, tasksRoutes);
 app.use('/api/preferences', generalLimiter, preferencesRoutes);
 app.use('/api/stats', generalLimiter, statsRoutes);
+app.use('/api/users', generalLimiter, usersRoutes);
 
 // Error Handling
 app.use(errorHandler);
