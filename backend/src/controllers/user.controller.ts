@@ -21,4 +21,18 @@ export class UserController {
       next(err);
     }
   };
+
+  public changePassword = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      await userService.changePassword(req.userId!, currentPassword, newPassword);
+      res.status(204).send();
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'Current password is incorrect') {
+        res.status(400).json({ message: err.message });
+        return;
+      }
+      next(err);
+    }
+  };
 }
