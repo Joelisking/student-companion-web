@@ -25,7 +25,7 @@ function LoginCard() {
         password,
       });
 
-      if (result?.error) throw new Error(result.error);
+      if (result?.error) throw new Error('Incorrect email or password. Please try again.');
 
       if (result?.ok) {
         router.push('/');
