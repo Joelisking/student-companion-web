@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { featureFlags } from '../../../lib/featureFlags';
+import { featureFlags } from '@/lib/featureFlags';
 import Link from 'next/link';
 
 export default function AuthenticatedLayout({
