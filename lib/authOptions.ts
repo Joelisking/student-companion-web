@@ -1,11 +1,6 @@
 import { type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
-const backendUrl =
-  process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:5001';
-
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
@@ -20,6 +15,9 @@ export const authOptions: NextAuthOptions = {
 
         if (!email || !password) return null;
 
+        const backendUrl =
+          process.env.BACKEND_URL || 'http://localhost:5001';
+
         try {
           const res = await fetch(`${backendUrl}/api/auth/login`, {
             method: 'POST',
@@ -27,19 +25,23 @@ export const authOptions: NextAuthOptions = {
             body: JSON.stringify({ email, password }),
           });
 
-          if (!res.ok) return null;
+          if (!res.ok) {
+            const body = await res.text().catch(() => '');
+            console.error(`Login failed: ${res.status} ${res.statusText}`, body);
+            return null;
+          }
 
           const data = await res.json();
           if (data && data.userId) {
             return {
               id: data.userId,
               email: data.email || email,
-              name: data.email || email,
+              name: data.name || data.email || email,
             };
           }
           return null;
         } catch (e) {
-          console.error('Auth error:', e);
+          console.error('Auth error — could not reach backend at', backendUrl, e);
           return null;
         }
       },
