@@ -15,8 +15,6 @@ services:
         sync: false
       - key: INTERNAL_API_SECRET
         sync: false
-      - key: FRONTEND_URL
-        value: https://student-companion-frontend.onrender.com
 
   - type: web
     name: student-companion-web

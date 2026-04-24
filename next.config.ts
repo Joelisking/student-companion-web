@@ -1,6 +1,6 @@
 import type { NextConfig } from 'next';
 
-const REQUIRED_VARS = ['BACKEND_URL', 'NEXTAUTH_SECRET', 'INTERNAL_API_SECRET'];
+const REQUIRED_VARS = ['BACKEND_URL', 'NEXTAUTH_URL', 'NEXTAUTH_SECRET', 'INTERNAL_API_SECRET'];
 
 const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
 if (missing.length > 0) {
@@ -10,10 +10,6 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-const nextConfig: NextConfig = {
-  env: {
-    BACKEND_URL: process.env.BACKEND_URL,
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
