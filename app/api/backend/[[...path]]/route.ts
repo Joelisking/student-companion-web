@@ -2,9 +2,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { NextRequest, NextResponse } from 'next/server';
 
-const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-const internalSecret = process.env.INTERNAL_API_SECRET;
-
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> }
@@ -45,6 +42,9 @@ async function proxy(
   params: Promise<{ path?: string[] }>,
   method: string
 ) {
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+
   const { path } = await params;
   const pathSegments = path ?? [];
   const backendPath = pathSegments.length ? pathSegments.join('/') : '';
