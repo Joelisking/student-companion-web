@@ -5,7 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { fetchAPI } from '../utils/api';
-import { SelectDropdown, PrimaryButton, Banner } from '@joel_ak/student-companion-lib';
+import { SelectDropdown, Banner } from '@joel_ak/student-companion-lib';
 
 const preferencesSchema = z.object({
   preferredTime: z.enum(['Morning', 'Afternoon', 'Evening', 'Night']),
@@ -712,17 +712,13 @@ export default function StudyPreferencesForm() {
             <div className="pref-divider" />
 
             {/* Submit */}
-            <PrimaryButton
+            <button
               type="submit"
-              label={
-                status === 'submitting'
-                  ? 'Saving…'
-                  : loadState === 'loaded'
-                  ? 'Update Preferences'
-                  : 'Save Preferences'
-              }
-              isLoading={status === 'submitting'}
-            />
+              className="pref-submit"
+              disabled={status === 'submitting'}
+            >
+              {status === 'submitting' ? 'Saving…' : loadState === 'loaded' ? 'Update Preferences' : 'Save Preferences'}
+            </button>
           </form>
         </div>
       )}
