@@ -79,9 +79,10 @@ async function proxy(
     body: body || undefined,
   });
 
+  const STRIP_HEADERS = new Set(['transfer-encoding', 'content-encoding', 'content-length']);
   const responseHeaders = new Headers();
   res.headers.forEach((v, k) => {
-    if (k.toLowerCase() !== 'transfer-encoding') responseHeaders.set(k, v);
+    if (!STRIP_HEADERS.has(k.toLowerCase())) responseHeaders.set(k, v);
   });
 
   if (res.status === 204) {
