@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { AvatarInitials, Tabs, TextInput, PasswordInput, PrimaryButton } from '@joel_ak/student-companion-lib';
+import { AvatarInitials, Tabs, TextInput, PasswordInput } from '@joel_ak/student-companion-lib';
 import { fetchAPI } from '../../../utils/api';
 
 interface Profile {
@@ -47,7 +47,13 @@ function ProfileTab({ profile, onUpdated }: { profile: Profile | null; onUpdated
           {message.text}
         </p>
       )}
-      <PrimaryButton label={saving ? 'Saving…' : 'Save changes'} onClick={handleSave} disabled={saving || !name.trim()} />
+      <button
+        onClick={handleSave}
+        disabled={saving || !name.trim()}
+        style={{ background: '#2563EB', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (saving || !name.trim()) ? 0.5 : 1 }}
+      >
+        {saving ? 'Saving…' : 'Save changes'}
+      </button>
     </div>
   );
 }
@@ -91,11 +97,13 @@ function ChangePasswordTab() {
           {message.text}
         </p>
       )}
-      <PrimaryButton
-        label={saving ? 'Saving…' : 'Change password'}
+      <button
         onClick={handleChange}
         disabled={saving || !current || !next || !confirm}
-      />
+        style={{ background: '#2563EB', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (saving || !current || !next || !confirm) ? 0.5 : 1 }}
+      >
+        {saving ? 'Saving…' : 'Change password'}
+      </button>
     </div>
   );
 }
